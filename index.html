@@ -35,6 +35,12 @@
       margin: 0 auto;
     }
 
+    #reader video {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
     #result {
       padding: 20px 10px;
       font-size: 28px;
@@ -64,37 +70,26 @@
   <div id="reader"></div>
 
   <div id="result">
-    読み取り待機中
+    カメラ起動中…
   </div>
 
-  <!-- バーコード読み取りライブラリ -->
   <script src="https://unpkg.com/@zxing/browser@0.1.5/umd/zxing-browser.min.js"></script>
 
   <script>
 
     const result = document.getElementById("result");
 
-    // カメラを起動
     async function startScanner() {
 
       try {
 
-        const codeReader = new ZXingBrowser.BrowserMultiFormatReader();
+        const codeReader =
+          new ZXingBrowser.BrowserMultiFormatReader();
 
-        // 背面カメラを優先
-        const devices =
-          await ZXingBrowser.BrowserCodeReader.listVideoInputDevices();
+        result.textContent = "カメラ起動中…";
 
-        if (devices.length === 0) {
-          result.textContent = "カメラが見つかりません";
-          return;
-        }
-
-        let deviceId = devices[devices.length - 1].deviceId;
-
-        // バーコード読み取り開始
-        codeReader.decodeFromVideoDevice(
-          deviceId,
+        await codeReader.decodeFromVideoDevice(
+          undefined,
           "reader",
           (resultCode, error) => {
 
