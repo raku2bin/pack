@@ -60,11 +60,11 @@
 <body>
 
   <header>
-    らくらくA　パック
+    らくらくB　パック
   </header>
 
   <div class="message">
-    バーコードをかざしてください
+    AAAバーコードをかざしてください
   </div>
 
   <div id="reader"></div>
@@ -108,11 +108,19 @@
 
       } catch (error) {
 
-        console.error(error);
+//        console.error(error);
+//        result.textContent =
+//          "カメラを起動できません";
 
+        console.error("カメラエラー:", error);
+      
         result.textContent =
-          "カメラを起動できません";
+          "エラー：" + (error.name || error.message || error);
 
+}
+
+そしてス
+        
       }
 
     }
