@@ -52,7 +52,6 @@
       margin: 0 auto;
 
       background: #000;
-
       overflow: hidden;
     }
 
@@ -61,13 +60,9 @@
       height: auto;
 
       display: block;
-
       background: #000;
     }
 
-    /*
-     * 読み取り枠
-     */
     .scan-frame {
       position: absolute;
 
@@ -82,9 +77,6 @@
       pointer-events: none;
     }
 
-    /*
-     * 中央ライン
-     */
     .scan-line {
       position: absolute;
 
@@ -100,39 +92,29 @@
       transform: translateY(-50%);
     }
 
-    /*
-     * 結果
-     */
     #result {
       min-height: 110px;
 
       padding: 20px 10px;
 
       background: white;
-
       color: #12395b;
 
       font-size: 36px;
-
       font-weight: bold;
 
       word-break: break-all;
     }
 
-    /*
-     * 状態
-     */
     #status {
       min-height: 55px;
 
       padding: 10px;
 
       background: #ddd;
-
       color: #111;
 
       font-size: 20px;
-
       font-weight: bold;
     }
 
@@ -150,7 +132,7 @@
 
 
   <div class="message">
-    AAA 18桁バーコードを赤枠に合わせてください
+    18桁バーコードを赤枠に合わせてください
   </div>
 
 
@@ -162,7 +144,6 @@
       muted
       playsinline>
     </video>
-
 
     <div class="scan-frame">
 
@@ -179,15 +160,18 @@
 
 
   <div id="status">
-    ITF（I 2 of 5）読み取り準備中…
+    ITF読み取り準備中…
   </div>
 
 
   <!-- ZXing Browser -->
 
-  <script
-    src="https://unpkg.com/@zxing/browser@0.1.5/umd/zxing-browser.min.js">
-  </script>
+  <script src="https://unpkg.com/@zxing/browser@0.1.5/umd/zxing-browser.min.js"></script>
+
+
+  <!-- ZXing Library -->
+
+  <script src="https://unpkg.com/@zxing/library@0.21.3"></script>
 
 
   <script>
@@ -207,9 +191,37 @@
       try {
 
         /*
-         * ITFだけを指定
+         * ZXing Libraryが
+         * 正しく読み込まれているか確認
          */
-        const hints = new Map();
+
+        console.log(
+          "ZXing:",
+          typeof ZXing
+        );
+
+
+        if (
+          typeof ZXing === "undefined"
+        ) {
+
+          result.textContent =
+            "ZXingが読み込めません";
+
+          status.textContent =
+            "ライブラリエラー";
+
+          return;
+
+        }
+
+
+        /*
+         * ITFを指定
+         */
+
+        const hints =
+          new Map();
 
 
         hints.set(
@@ -223,9 +235,6 @@
         );
 
 
-        /*
-         * より強く解析
-         */
         hints.set(
 
           ZXing.DecodeHintType.TRY_HARDER,
@@ -236,8 +245,9 @@
 
 
         /*
-         * ZXing
+         * ZXingリーダー
          */
+
         const codeReader =
           new ZXingBrowser.BrowserMultiFormatReader(
             hints
@@ -249,12 +259,13 @@
 
 
         status.textContent =
-          "ITF（I 2 of 5）を読み取り中…";
+          "ITF（18桁）読み取り中…";
 
 
         /*
          * カメラ一覧
          */
+
         const devices =
           await ZXingBrowser
             .BrowserCodeReader
@@ -262,7 +273,7 @@
 
 
         console.log(
-          "カメラ一覧:",
+          "カメラ:",
           devices
         );
 
@@ -273,7 +284,7 @@
         ) {
 
           result.textContent =
-            "カメラが見つかりません";
+            "カメラがありません";
 
           status.textContent =
             "カメラなし";
@@ -286,6 +297,7 @@
         /*
          * 最初のカメラ
          */
+
         let deviceId =
           devices[0].deviceId;
 
@@ -293,6 +305,7 @@
         /*
          * 背面カメラを優先
          */
+
         for (
           const device of devices
         ) {
@@ -306,11 +319,8 @@
           if (
 
             label.includes("back") ||
-
             label.includes("rear") ||
-
             label.includes("environment") ||
-
             label.includes("背面")
 
           ) {
@@ -338,6 +348,7 @@
         /*
          * 読み取り開始
          */
+
         await codeReader.decodeFromVideoDevice(
 
           deviceId,
@@ -347,45 +358,33 @@
           (resultCode, error) => {
 
 
-            if (!resultCode) {
-
-              return;
-
-            }
-
-
             /*
              * 読み取り成功
              */
-            const value =
-              resultCode.getText();
+
+            if (resultCode) {
+
+              const value =
+                resultCode.getText();
 
 
-            console.log(
-              "======================"
-            );
+              console.log(
+                "★ 読み取り成功 ★"
+              );
 
-            console.log(
-              "★ ITF 読み取り成功 ★"
-            );
-
-            console.log(
-              "番号:",
-              value
-            );
-
-            console.log(
-              "======================"
-            );
+              console.log(
+                value
+              );
 
 
-            result.textContent =
-              value;
+              result.textContent =
+                value;
 
 
-            status.textContent =
-              "ITF 読み取り成功";
+              status.textContent =
+                "ITF 読み取り成功";
 
+            }
 
           }
 
@@ -396,7 +395,7 @@
       catch (error) {
 
         console.error(
-          "ZXingエラー:",
+          "エラー:",
           error
         );
 
@@ -418,9 +417,6 @@
     }
 
 
-    /*
-     * 開始
-     */
     startScanner();
 
   </script>
