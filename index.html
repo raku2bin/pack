@@ -52,6 +52,7 @@
       margin: 0 auto;
 
       background: #000;
+
       overflow: hidden;
     }
 
@@ -60,9 +61,13 @@
       height: auto;
 
       display: block;
+
       background: #000;
     }
 
+    /*
+     * 読み取り位置
+     */
     .scan-frame {
       position: absolute;
 
@@ -77,6 +82,9 @@
       pointer-events: none;
     }
 
+    /*
+     * 中央ライン
+     */
     .scan-line {
       position: absolute;
 
@@ -92,29 +100,39 @@
       transform: translateY(-50%);
     }
 
+    /*
+     * 読み取り結果
+     */
     #result {
       min-height: 110px;
 
       padding: 20px 10px;
 
       background: white;
+
       color: #12395b;
 
       font-size: 36px;
+
       font-weight: bold;
 
       word-break: break-all;
     }
 
-    #status {
-      min-height: 55px;
+    /*
+     * バーコード形式
+     */
+    #format {
+      min-height: 50px;
 
       padding: 10px;
 
       background: #ddd;
+
       color: #111;
 
       font-size: 20px;
+
       font-weight: bold;
     }
 
@@ -132,7 +150,7 @@
 
 
   <div class="message">
-    18桁バーコードを赤枠に合わせてください
+    バーコードを赤枠に合わせてください
   </div>
 
 
@@ -144,6 +162,7 @@
       muted
       playsinline>
     </video>
+
 
     <div class="scan-frame">
 
@@ -159,8 +178,8 @@
   </div>
 
 
-  <div id="status">
-    ITF読み取り準備中…
+  <div id="format">
+    JAN / NW-7 読み取り準備中…
   </div>
 
 
@@ -179,28 +198,23 @@
     const result =
       document.getElementById("result");
 
-    const status =
-      document.getElementById("status");
+    const format =
+      document.getElementById("format");
 
     const video =
       document.getElementById("reader");
 
 
+    /*
+     * スキャナー開始
+     */
     async function startScanner() {
 
       try {
 
         /*
-         * ZXing Libraryが
-         * 正しく読み込まれているか確認
+         * ZXingが読み込まれているか確認
          */
-
-        console.log(
-          "ZXing:",
-          typeof ZXing
-        );
-
-
         if (
           typeof ZXing === "undefined"
         ) {
@@ -208,7 +222,7 @@
           result.textContent =
             "ZXingが読み込めません";
 
-          status.textContent =
+          format.textContent =
             "ライブラリエラー";
 
           return;
@@ -217,9 +231,11 @@
 
 
         /*
-         * ITFを指定
+         * 読み取り対象
+         *
+         * EAN-13 = JAN
+         * CODABAR = NW-7
          */
-
         const hints =
           new Map();
 
@@ -229,12 +245,19 @@
           ZXing.DecodeHintType.POSSIBLE_FORMATS,
 
           [
-            ZXing.BarcodeFormat.ITF
+
+            ZXing.BarcodeFormat.EAN_13,
+
+            ZXing.BarcodeFormat.CODABAR
+
           ]
 
         );
 
 
+        /*
+         * より強く読み取る
+         */
         hints.set(
 
           ZXing.DecodeHintType.TRY_HARDER,
@@ -245,9 +268,8 @@
 
 
         /*
-         * ZXingリーダー
+         * MultiFormatReader
          */
-
         const codeReader =
           new ZXingBrowser.BrowserMultiFormatReader(
             hints
@@ -258,14 +280,13 @@
           "カメラ起動中…";
 
 
-        status.textContent =
-          "ITF（18桁）読み取り中…";
+        format.textContent =
+          "JAN / NW-7 を検出中…";
 
 
         /*
-         * カメラ一覧
+         * カメラ一覧取得
          */
-
         const devices =
           await ZXingBrowser
             .BrowserCodeReader
@@ -273,20 +294,23 @@
 
 
         console.log(
-          "カメラ:",
+          "カメラ一覧:",
           devices
         );
 
 
+        /*
+         * カメラなし
+         */
         if (
           !devices ||
           devices.length === 0
         ) {
 
           result.textContent =
-            "カメラがありません";
+            "カメラが見つかりません";
 
-          status.textContent =
+          format.textContent =
             "カメラなし";
 
           return;
@@ -295,9 +319,8 @@
 
 
         /*
-         * 最初のカメラ
+         * 使用カメラ
          */
-
         let deviceId =
           devices[0].deviceId;
 
@@ -305,7 +328,6 @@
         /*
          * 背面カメラを優先
          */
-
         for (
           const device of devices
         ) {
@@ -319,8 +341,11 @@
           if (
 
             label.includes("back") ||
+
             label.includes("rear") ||
+
             label.includes("environment") ||
+
             label.includes("背面")
 
           ) {
@@ -342,13 +367,16 @@
 
 
         result.textContent =
-          "18桁バーコード読み取り中…";
+          "バーコード読み取り中…";
+
+
+        format.textContent =
+          "JAN / NW-7";
 
 
         /*
-         * 読み取り開始
+         * 連続読み取り
          */
-
         await codeReader.decodeFromVideoDevice(
 
           deviceId,
@@ -361,7 +389,6 @@
             /*
              * 読み取り成功
              */
-
             if (resultCode) {
 
               const value =
@@ -369,20 +396,61 @@
 
 
               console.log(
+                "======================"
+              );
+
+              console.log(
                 "★ 読み取り成功 ★"
               );
 
               console.log(
+                "番号:",
                 value
               );
 
 
+              /*
+               * バーコード形式
+               */
+              let type =
+                "不明";
+
+
+              try {
+
+                type =
+                  resultCode
+                    .getBarcodeFormat();
+
+              }
+              catch (e) {
+
+                type =
+                  "不明";
+
+              }
+
+
+              console.log(
+                "形式:",
+                type
+              );
+
+
+              /*
+               * 結果表示
+               */
               result.textContent =
                 value;
 
 
-              status.textContent =
-                "ITF 読み取り成功";
+              format.textContent =
+                "形式：" + type;
+
+
+              console.log(
+                "======================"
+              );
 
             }
 
@@ -395,7 +463,7 @@
       catch (error) {
 
         console.error(
-          "エラー:",
+          "カメラ・読み取りエラー:",
           error
         );
 
@@ -409,7 +477,7 @@
           );
 
 
-        status.textContent =
+        format.textContent =
           "読み取りエラー";
 
       }
@@ -417,6 +485,9 @@
     }
 
 
+    /*
+     * 起動
+     */
     startScanner();
 
   </script>
