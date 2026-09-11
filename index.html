@@ -37,18 +37,16 @@
     }
 
     .message {
-      padding: 16px 10px;
+      padding: 18px 10px;
       font-size: 22px;
       font-weight: bold;
     }
 
-    #scanner {
+    .camera-area {
       position: relative;
 
       width: 100%;
       max-width: 600px;
-
-      height: 360px;
 
       margin: 0 auto;
 
@@ -57,55 +55,26 @@
       overflow: hidden;
     }
 
-    /*
-     * Quagga2がカメラ映像を入れる場所
-     */
-    #scanner video {
+    #reader {
       width: 100%;
-      height: 100%;
-
-      object-fit: cover;
-
       display: block;
     }
 
-    /*
-     * Quagga2のcanvas
-     */
-    #scanner canvas {
-      position: absolute;
-
-      top: 0;
-      left: 0;
-
-      width: 100%;
-      height: 100%;
-
-      pointer-events: none;
-    }
-
-    /*
-     * 読み取り目安
-     */
+    /* 読み取り目安 */
     .scan-frame {
       position: absolute;
 
-      left: 5%;
-      right: 5%;
+      left: 6%;
+      right: 6%;
 
-      top: 30%;
-      height: 40%;
+      top: 35%;
+      height: 30%;
 
       border: 4px solid red;
-
-      z-index: 10;
 
       pointer-events: none;
     }
 
-    /*
-     * 中央線
-     */
     .scan-line {
       position: absolute;
 
@@ -130,7 +99,7 @@
 
       color: #12395b;
 
-      font-size: 34px;
+      font-size: 32px;
 
       font-weight: bold;
 
@@ -145,203 +114,189 @@
 <body>
 
 
-  <header>
-    らくらく　パック
-  </header>
+<header>
+  らくらく　パック
+</header>
 
 
-  <div class="message">
-    JANバーコードを赤枠に合わせてください
+<div class="message">
+  CCCバーコードを赤枠に合わせてください
+</div>
+
+
+<div class="camera-area">
+
+  <video
+    id="reader"
+    autoplay
+    muted
+    playsinline>
+  </video>
+
+  <div class="scan-frame">
+    <div class="scan-line"></div>
   </div>
 
-
-  <div id="scanner">
-
-    <div class="scan-frame">
-      <div class="scan-line"></div>
-    </div>
-
-  </div>
+</div>
 
 
-  <div id="result">
-    カメラ起動中…
-  </div>
+<div id="result">
+  確認中…
+</div>
 
 
-  <!-- Quagga2 -->
-  <script
-    src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.2.6/dist/quagga.min.js">
-  </script>
+<script>
+
+  const video =
+    document.getElementById("reader");
+
+  const result =
+    document.getElementById("result");
 
 
-  <script>
+  /*
+   * BarcodeDetector対応確認
+   */
+  if (!("BarcodeDetector" in window)) {
 
-    const result =
-      document.getElementById("result");
+    result.textContent =
+      "このブラウザはBarcodeDetector非対応";
+
+  } else {
+
+    startScanner();
+
+  }
 
 
-    /*
-     * Quagga2開始
-     */
-    Quagga.init({
+  async function startScanner() {
 
-      inputStream: {
+    try {
 
-        name: "Live",
+      /*
+       * 読み取り対象
+       *
+       * まずJANを優先
+       */
+      const detector =
+        new BarcodeDetector({
 
-        type: "LiveStream",
+          formats: [
+            "ean_13",
+            "ean_8",
+            "upc_a",
+            "upc_e",
+            "code_128",
+            "itf"
+          ]
 
-        target:
-          document.querySelector("#scanner"),
+        });
 
-        constraints: {
 
-          facingMode: "environment",
+      /*
+       * カメラ起動
+       */
+      const stream =
+        await navigator.mediaDevices.getUserMedia({
 
-          width: {
-            ideal: 1280
+          video: {
+            facingMode: {
+              ideal: "environment"
+            },
+
+            width: {
+              ideal: 1280
+            },
+
+            height: {
+              ideal: 720
+            }
           },
 
-          height: {
-            ideal: 720
+          audio: false
+
+        });
+
+
+      video.srcObject =
+        stream;
+
+
+      await video.play();
+
+
+      result.textContent =
+        "バーコード読み取り中…";
+
+
+      /*
+       * 連続スキャン
+       */
+      scan();
+
+
+      async function scan() {
+
+        try {
+
+          /*
+           * カメラ映像から検出
+           */
+          const barcodes =
+            await detector.detect(video);
+
+
+          if (barcodes.length > 0) {
+
+            const value =
+              barcodes[0].rawValue;
+
+
+            console.log(
+              "★ 読み取り成功 ★",
+              value
+            );
+
+
+            result.textContent =
+              value;
+
           }
 
-        },
+        } catch (error) {
 
-        /*
-         * カメラ映像を解析する範囲
-         */
-        area: {
-
-          top: "30%",
-
-          right: "5%",
-
-          left: "5%",
-
-          bottom: "30%"
+          console.error(
+            "検出エラー:",
+            error
+          );
 
         }
 
-      },
 
-
-      /*
-       * 今回はJANだけ
-       */
-      decoder: {
-
-        readers: [
-          "ean_reader"
-        ]
-
-      },
-
-
-      /*
-       * バーコードを探す
-       */
-      locate: true,
-
-
-      locator: {
-
-        halfSample: false,
-
-        patchSize: "medium"
-
-      },
-
-
-      numOfWorkers: 2,
-
-      frequency: 10,
-
-
-      debug: false
-
-    },
-
-
-    function(error) {
-
-
-      if (error) {
-
-        console.error(
-          "Quagga起動エラー:",
-          error
-        );
-
-        result.textContent =
-          "エラー：" + String(error);
-
-        return;
+        /*
+         * 約30fpsで繰り返す
+         */
+        requestAnimationFrame(scan);
 
       }
 
 
-      console.log(
-        "Quagga2 起動成功"
+    } catch (error) {
+
+      console.error(
+        "カメラエラー:",
+        error
       );
 
 
       result.textContent =
-        "JAN読み取り中…";
+        "エラー：" + String(error);
 
+    }
 
-      /*
-       * カメラ開始
-       */
-      Quagga.start();
+  }
 
-    });
-
-
-    /*
-     * バーコード検出
-     */
-    Quagga.onDetected(function(data) {
-
-
-      if (
-        !data ||
-        !data.codeResult
-      ) {
-
-        return;
-
-      }
-
-
-      const code =
-        data.codeResult.code;
-
-
-      if (!code) {
-
-        return;
-
-      }
-
-
-      console.log(
-        "★ JAN読み取り成功 ★",
-        code
-      );
-
-
-      /*
-       * 読み取ったJANを表示
-       */
-      result.textContent =
-        code;
-
-    });
-
-
-  </script>
+</script>
 
 
 </body>
