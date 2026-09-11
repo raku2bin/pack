@@ -78,111 +78,73 @@
   <!-- ZXing Browser 最新版 -->
   <script src="https://unpkg.com/@zxing/browser@latest"></script>
 
-  <script>
+<script>
+  const result = document.getElementById("result");
+  const video = document.getElementById("reader");
 
-    const result = document.getElementById("result");
-    const video = document.getElementById("reader");
+  async function startScanner() {
 
-    async function startScanner() {
+    try {
 
-      try {
+      result.textContent = "カメラ起動中…";
 
-        result.textContent = "カメラ起動中…";
+      const codeReader =
+        new ZXingBrowser.BrowserMultiFormatReader();
 
-        // バーコード読み取りエンジン
-        const codeReader =
-          new ZXingBrowser.BrowserMultiFormatReader();
+      // カメラ一覧を取得
+      const devices =
+        await ZXingBrowser.BrowserCodeReader
+          .listVideoInputDevices();
 
-        // カメラ一覧を取得
-        const devices =
-          await ZXingBrowser.BrowserCodeReader
-            .listVideoInputDevices();
+      if (!devices || devices.length === 0) {
+        result.textContent = "カメラが見つかりません";
+        return;
+      }
 
-        console.log("カメラ一覧:", devices);
+      // スマホでは最後のカメラを使用
+      const deviceId =
+        devices[devices.length - 1].deviceId;
 
-        if (!devices || devices.length === 0) {
+      console.log("使用カメラ:", deviceId);
 
-          result.textContent =
-            "カメラが見つかりません";
-
-          return;
-        }
-
-        // 背面カメラを優先
-        let selectedDeviceId =
-          devices[0].deviceId;
-
-        for (const device of devices) {
-
-          const label =
-            (device.label || "").toLowerCase();
-
-          if (
-            label.includes("back") ||
-            label.includes("rear") ||
-            label.includes("environment") ||
-            label.includes("背面")
-          ) {
-
-            selectedDeviceId =
-              device.deviceId;
-
-            break;
-          }
-        }
-
-        console.log(
-          "使用するカメラ:",
-          selectedDeviceId
-        );
-
-        // カメラ＋連続バーコード読み取り開始
+      // 連続スキャン開始
+      const controls =
         await codeReader.decodeFromVideoDevice(
-          selectedDeviceId,
+          deviceId,
           video,
-          (resultCode, error, controls) => {
+          (resultCode, error) => {
 
             if (resultCode) {
 
               const value =
                 resultCode.getText();
 
-              console.log(
-                "★★ 読み取り成功 ★★",
-                value
-              );
+              console.log("読み取り成功:", value);
 
               result.textContent = value;
-
             }
 
-            // 読み取り失敗は通常なので
-            // 画面には表示しない
           }
         );
 
-        // カメラ起動完了
-        result.textContent =
-          "バーコードをかざしてください";
+      console.log("スキャン開始完了");
 
-      } catch (error) {
+      result.textContent =
+        "バーコードをかざしてください";
 
-        console.error(
-          "カメラ・スキャンエラー:",
-          error
-        );
+    } catch (error) {
 
-        result.textContent =
-          "エラー：" + String(error);
+      console.error("スキャンエラー:", error);
 
-      }
+      result.textContent =
+        "エラー：" + String(error);
 
     }
 
-    // 起動
-    startScanner();
+  }
 
-  </script>
-
+  startScanner();
+</script>
+  
 </body>
 </html>
