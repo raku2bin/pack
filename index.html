@@ -66,16 +66,16 @@
     }
 
     /*
-     * 読み取り範囲
+     * 読み取り枠
      */
     .scan-frame {
       position: absolute;
 
-      left: 5%;
-      right: 5%;
+      left: 4%;
+      right: 4%;
 
-      top: 30%;
-      height: 40%;
+      top: 25%;
+      height: 50%;
 
       border: 5px solid red;
 
@@ -101,7 +101,7 @@
     }
 
     /*
-     * 読み取り結果
+     * 結果
      */
     #result {
       min-height: 110px;
@@ -120,10 +120,10 @@
     }
 
     /*
-     * バーコード形式
+     * 状態
      */
-    #format {
-      min-height: 50px;
+    #status {
+      min-height: 55px;
 
       padding: 10px;
 
@@ -150,7 +150,7 @@
 
 
   <div class="message">
-    VV バーコードを赤枠に合わせてください
+    AAA 18桁バーコードを赤枠に合わせてください
   </div>
 
 
@@ -178,14 +178,13 @@
   </div>
 
 
-  <div id="format">
-    読み取り準備中…
+  <div id="status">
+    ITF（I 2 of 5）読み取り準備中…
   </div>
 
 
-  <!--
-    ZXing Browser
-  -->
+  <!-- ZXing Browser -->
+
   <script
     src="https://unpkg.com/@zxing/browser@0.1.5/umd/zxing-browser.min.js">
   </script>
@@ -196,36 +195,61 @@
     const result =
       document.getElementById("result");
 
-    const format =
-      document.getElementById("format");
+    const status =
+      document.getElementById("status");
 
     const video =
       document.getElementById("reader");
 
 
-    /*
-     * スキャナー開始
-     */
     async function startScanner() {
 
       try {
 
         /*
-         * ZXing MultiFormatReader
-         *
-         * まずは今までJANを読めていた
-         * BrowserMultiFormatReaderを使用
+         * ITFだけを指定
+         */
+        const hints = new Map();
+
+
+        hints.set(
+
+          ZXing.DecodeHintType.POSSIBLE_FORMATS,
+
+          [
+            ZXing.BarcodeFormat.ITF
+          ]
+
+        );
+
+
+        /*
+         * より強く解析
+         */
+        hints.set(
+
+          ZXing.DecodeHintType.TRY_HARDER,
+
+          true
+
+        );
+
+
+        /*
+         * ZXing
          */
         const codeReader =
-          new ZXingBrowser.BrowserMultiFormatReader();
+          new ZXingBrowser.BrowserMultiFormatReader(
+            hints
+          );
 
 
         result.textContent =
           "カメラ起動中…";
 
 
-        format.textContent =
-          "EAN-13 / ITF / CODE-128";
+        status.textContent =
+          "ITF（I 2 of 5）を読み取り中…";
 
 
         /*
@@ -243,9 +267,6 @@
         );
 
 
-        /*
-         * カメラがない場合
-         */
         if (
           !devices ||
           devices.length === 0
@@ -254,7 +275,7 @@
           result.textContent =
             "カメラが見つかりません";
 
-          format.textContent =
+          status.textContent =
             "カメラなし";
 
           return;
@@ -270,7 +291,7 @@
 
 
         /*
-         * 背面カメラを探す
+         * 背面カメラを優先
          */
         for (
           const device of devices
@@ -311,15 +332,11 @@
 
 
         result.textContent =
-          "バーコード読み取り中…";
-
-
-        format.textContent =
-          "JAN / ITF / CODE-128 を検出中";
+          "18桁バーコード読み取り中…";
 
 
         /*
-         * 連続読み取り開始
+         * 読み取り開始
          */
         await codeReader.decodeFromVideoDevice(
 
@@ -330,76 +347,45 @@
           (resultCode, error) => {
 
 
-            /*
-             * 読み取り成功
-             */
-            if (resultCode) {
+            if (!resultCode) {
 
-              const value =
-                resultCode.getText();
-
-
-              console.log(
-                "===================="
-              );
-
-              console.log(
-                "★ 読み取り成功 ★"
-              );
-
-              console.log(
-                "番号:",
-                value
-              );
-
-              console.log(
-                "===================="
-              );
-
-
-              /*
-               * 番号を表示
-               */
-              result.textContent =
-                value;
-
-
-              /*
-               * ZXingが判定した形式
-               */
-              try {
-
-                const type =
-                  resultCode.getBarcodeFormat();
-
-
-                format.textContent =
-                  "バーコード形式：" +
-                  type;
-
-
-                console.log(
-                  "バーコード形式:",
-                  type
-                );
-
-              }
-              catch (e) {
-
-                format.textContent =
-                  "読み取り成功";
-
-              }
+              return;
 
             }
 
 
             /*
-             * 読み取り失敗は画面に表示しない
-             *
-             * カメラを止めずに
-             * 次のフレームを読む
+             * 読み取り成功
              */
+            const value =
+              resultCode.getText();
+
+
+            console.log(
+              "======================"
+            );
+
+            console.log(
+              "★ ITF 読み取り成功 ★"
+            );
+
+            console.log(
+              "番号:",
+              value
+            );
+
+            console.log(
+              "======================"
+            );
+
+
+            result.textContent =
+              value;
+
+
+            status.textContent =
+              "ITF 読み取り成功";
+
 
           }
 
@@ -410,7 +396,7 @@
       catch (error) {
 
         console.error(
-          "カメラ・読み取りエラー:",
+          "ZXingエラー:",
           error
         );
 
@@ -424,7 +410,7 @@
           );
 
 
-        format.textContent =
+        status.textContent =
           "読み取りエラー";
 
       }
@@ -433,7 +419,7 @@
 
 
     /*
-     * ページ読み込み後に開始
+     * 開始
      */
     startScanner();
 
