@@ -66,27 +66,9 @@
     const result = document.getElementById("result");
     async function startScanner() {
       try {
-
-        const codeReader =
-          new ZXingBrowser.BrowserMultiFormatReader();
-
-        result.textContent = "カメラ起動中…";
-
-        await codeReader.decodeFromVideoDevice(
-          undefined,
-          "reader",
-          (resultCode, error) => {
-
-            if (resultCode) {
-
-              const value = resultCode.getText();
-
-              console.log("読み取り:", value);
-
-              result.textContent = value;
-
-            }
-
+　　        const codeReader =
+    　      new ZXingBrowser.BrowserMultiFormatReader();
+　　        result.textContent = "カメラ起動中…";
           }
         );
 
