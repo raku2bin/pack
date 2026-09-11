@@ -32,15 +32,10 @@
     #reader {
       width: 100%;
       max-width: 600px;
-      margin: 0 auto;
-    }
-
-    #reader video {
-      width: 100%;
       height: auto;
+      margin: 0 auto;
       display: block;
     }
-
     #result {
       padding: 20px 10px;
       font-size: 28px;
@@ -60,9 +55,9 @@
 <body>
   <header>らくらく　パック</header>
   <div class="message">
-    DDバーコードをかざしてください
+    AAバーコードをかざしてください
   </div>
-  <div id="reader"></div>
+　<video id="reader" autoplay muted playsinline></video>
   <div id="result">
     カメラ起動中…
   </div>
