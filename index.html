@@ -58,28 +58,18 @@
 </head>
 
 <body>
-  <header>
-    らくらくD　パック
-  </header>
-
+  <header>らくらく　パック</header>
   <div class="message">
-    CCバーコードをかざしてください
+    DDバーコードをかざしてください
   </div>
-
   <div id="reader"></div>
-
   <div id="result">
     カメラ起動中…
   </div>
-
   <script src="https://unpkg.com/@zxing/browser@0.1.5/umd/zxing-browser.min.js"></script>
-
   <script>
-
     const result = document.getElementById("result");
-
     async function startScanner() {
-
       try {
 
         const codeReader =
