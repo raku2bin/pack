@@ -1,10 +1,15 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
   <title>らくらく パック</title>
+
   <style>
+
     * {
       box-sizing: border-box;
     }
@@ -20,10 +25,12 @@
     header {
       height: 70px;
       background: #12395b;
+
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 26px;
+
+      font-size: 28px;
       font-weight: bold;
     }
 
@@ -33,25 +40,94 @@
       font-weight: bold;
     }
 
-    #reader {
+    /* カメラ部分 */
+    .camera-area {
+      position: relative;
       width: 100%;
       max-width: 600px;
-      height: auto;
       margin: 0 auto;
-      display: block;
+      overflow: hidden;
       background: #000;
     }
 
+    #reader {
+      width: 100%;
+      display: block;
+    }
+
+    /*
+      読み取り枠
+    */
+    .scan-frame {
+      position: absolute;
+
+      left: 8%;
+      right: 8%;
+
+      top: 35%;
+      height: 30%;
+
+      border: 4px solid red;
+
+      pointer-events: none;
+    }
+
+    /*
+      枠の中央線
+    */
+    .scan-line {
+      position: absolute;
+
+      left: 0;
+      right: 0;
+
+      top: 50%;
+
+      height: 3px;
+
+      background: red;
+
+      transform: translateY(-50%);
+    }
+
+    /*
+      枠の説明
+    */
+    .frame-message {
+      position: absolute;
+
+      left: 0;
+      right: 0;
+
+      bottom: 8%;
+
+      font-size: 20px;
+      font-weight: bold;
+
+      text-shadow:
+        0 2px 4px #000,
+        0 0 5px #000;
+    }
+
+    /*
+      読み取り結果
+    */
     #result {
       padding: 20px 10px;
-      font-size: 32px;
-      font-weight: bold;
+
+      min-height: 90px;
+
       background: white;
       color: #12395b;
-      min-height: 90px;
+
+      font-size: 32px;
+      font-weight: bold;
+
       word-break: break-all;
     }
+
   </style>
+
 </head>
 
 <body>
@@ -61,90 +137,194 @@
   </header>
 
   <div class="message">
-    DDバーコードをかざしてください
+    バーコードを枠内に合わせてください
   </div>
 
-  <video
-    id="reader"
-    autoplay
-    muted
-    playsinline>
-  </video>
+  <div class="camera-area">
+
+    <video
+      id="reader"
+      autoplay
+      muted
+      playsinline>
+    </video>
+
+    <div class="scan-frame">
+      <div class="scan-line"></div>
+    </div>
+
+    <div class="frame-message">
+      AA-赤い枠にバーコードを合わせてください
+    </div>
+
+  </div>
 
   <div id="result">
-    カメラ準備中…
+    カメラ起動中…
   </div>
 
-  <!-- ZXing Browser 最新版 -->
+
+  <!-- ZXing Browser -->
   <script src="https://unpkg.com/@zxing/browser@latest"></script>
 
-<script>
-  const result = document.getElementById("result");
-  const video = document.getElementById("reader");
 
-  async function startScanner() {
+  <script>
 
-    try {
+    const result =
+      document.getElementById("result");
 
-      result.textContent = "カメラ起動中…";
+    const video =
+      document.getElementById("reader");
 
-      const codeReader =
-        new ZXingBrowser.BrowserMultiFormatReader();
 
-      // カメラ一覧を取得
-      const devices =
-        await ZXingBrowser.BrowserCodeReader
-          .listVideoInputDevices();
+    async function startScanner() {
 
-      if (!devices || devices.length === 0) {
-        result.textContent = "カメラが見つかりません";
-        return;
-      }
+      try {
 
-      // スマホでは最後のカメラを使用
-      const deviceId =
-        devices[devices.length - 1].deviceId;
+        /*
+         * ZXing読み取りエンジン
+         */
+        const codeReader =
+          new ZXingBrowser.BrowserMultiFormatReader();
 
-      console.log("使用カメラ:", deviceId);
 
-      // 連続スキャン開始
-      const controls =
+        /*
+         * カメラ一覧取得
+         */
+        const devices =
+          await ZXingBrowser.BrowserCodeReader
+            .listVideoInputDevices();
+
+
+        console.log(
+          "カメラ一覧:",
+          devices
+        );
+
+
+        if (!devices ||
+            devices.length === 0) {
+
+          result.textContent =
+            "カメラが見つかりません";
+
+          return;
+        }
+
+
+        /*
+         * 背面カメラを優先
+         */
+        let deviceId =
+          devices[devices.length - 1].deviceId;
+
+
+        for (const device of devices) {
+
+          const label =
+            (device.label || "").toLowerCase();
+
+          if (
+            label.includes("back") ||
+            label.includes("rear") ||
+            label.includes("environment") ||
+            label.includes("背面")
+          ) {
+
+            deviceId =
+              device.deviceId;
+
+            break;
+          }
+        }
+
+
+        console.log(
+          "使用カメラ:",
+          deviceId
+        );
+
+
+        /*
+         * ここで先に表示を変更する
+         *
+         * decodeFromVideoDevice() は
+         * 連続スキャンなので、
+         * await の後にはすぐ進まない。
+         */
+        result.textContent =
+          "読み取り中…";
+
+
+        /*
+         * 連続バーコード読み取り開始
+         */
         await codeReader.decodeFromVideoDevice(
+
           deviceId,
+
           video,
+
           (resultCode, error) => {
 
+            /*
+             * バーコードを発見した場合
+             */
             if (resultCode) {
 
               const value =
                 resultCode.getText();
 
-              console.log("読み取り成功:", value);
 
-              result.textContent = value;
+              console.log(
+                "読み取り成功:",
+                value
+              );
+
+
+              /*
+               * 18桁チェック
+               */
+              if (/^\d{18}$/.test(value)) {
+
+                result.textContent =
+                  value;
+
+              } else {
+
+                result.textContent =
+                  "読み取り：" + value;
+
+              }
+
             }
 
           }
+
         );
 
-      console.log("スキャン開始完了");
 
-      result.textContent =
-        "バーコードをかざしてください";
+      } catch (error) {
 
-    } catch (error) {
+        console.error(
+          "スキャンエラー:",
+          error
+        );
 
-      console.error("スキャンエラー:", error);
+        result.textContent =
+          "エラー：" + String(error);
 
-      result.textContent =
-        "エラー：" + String(error);
+      }
 
     }
 
-  }
 
-  startScanner();
-</script>
-  
+    /*
+     * スキャナー開始
+     */
+    startScanner();
+
+  </script>
+
 </body>
 </html>
