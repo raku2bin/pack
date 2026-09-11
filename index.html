@@ -2,6 +2,7 @@
 <html lang="ja">
 
 <head>
+
   <meta charset="UTF-8">
 
   <meta
@@ -38,7 +39,7 @@
 
     .message {
       padding: 18px 10px;
-      font-size: 22px;
+      font-size: 24px;
       font-weight: bold;
     }
 
@@ -57,24 +58,29 @@
 
     #reader {
       width: 100%;
+      height: auto;
+
       display: block;
+
+      background: #000;
     }
 
-    /* 読み取り目安 */
+    /* 読み取り枠 */
     .scan-frame {
       position: absolute;
 
-      left: 6%;
-      right: 6%;
+      left: 5%;
+      right: 5%;
 
-      top: 35%;
-      height: 30%;
+      top: 30%;
+      height: 40%;
 
-      border: 4px solid red;
+      border: 5px solid red;
 
       pointer-events: none;
     }
 
+    /* 中央線 */
     .scan-line {
       position: absolute;
 
@@ -90,8 +96,9 @@
       transform: translateY(-50%);
     }
 
+    /* 読み取り結果 */
     #result {
-      min-height: 100px;
+      min-height: 110px;
 
       padding: 20px 10px;
 
@@ -99,11 +106,26 @@
 
       color: #12395b;
 
-      font-size: 32px;
+      font-size: 36px;
 
       font-weight: bold;
 
       word-break: break-all;
+    }
+
+    /* 読み取り種類 */
+    #format {
+      min-height: 45px;
+
+      padding: 8px;
+
+      background: #ddd;
+
+      color: #111;
+
+      font-size: 18px;
+
+      font-weight: bold;
     }
 
   </style>
@@ -114,189 +136,315 @@
 <body>
 
 
-<header>
-  らくらく　パック
-</header>
+  <header>
+    らくらく　パック
+  </header>
 
 
-<div class="message">
-  CCCバーコードを赤枠に合わせてください
-</div>
-
-
-<div class="camera-area">
-
-  <video
-    id="reader"
-    autoplay
-    muted
-    playsinline>
-  </video>
-
-  <div class="scan-frame">
-    <div class="scan-line"></div>
+  <div class="message">
+    BBBバーコードを赤枠に合わせてください
   </div>
 
-</div>
+
+  <div class="camera-area">
+
+    <video
+      id="reader"
+      autoplay
+      muted
+      playsinline>
+    </video>
 
 
-<div id="result">
-  確認中…
-</div>
+    <div class="scan-frame">
+
+      <div class="scan-line"></div>
+
+    </div>
+
+  </div>
 
 
-<script>
-
-  const video =
-    document.getElementById("reader");
-
-  const result =
-    document.getElementById("result");
+  <div id="result">
+    カメラ起動中…
+  </div>
 
 
-  /*
-   * BarcodeDetector対応確認
-   */
-  if (!("BarcodeDetector" in window)) {
-
-    result.textContent =
-      "このブラウザはBarcodeDetector非対応";
-
-  } else {
-
-    startScanner();
-
-  }
+  <div id="format">
+    読み取り準備中…
+  </div>
 
 
-  async function startScanner() {
+  <!-- ZXing Browser -->
+  <script src="https://unpkg.com/@zxing/browser@0.1.5/umd/zxing-browser.min.js"></script>
 
-    try {
 
-      /*
-       * 読み取り対象
-       *
-       * まずJANを優先
-       */
-      const detector =
-        new BarcodeDetector({
+  <script>
 
-          formats: [
-            "ean_13",
-            "ean_8",
-            "upc_a",
-            "upc_e",
-            "code_128",
-            "itf"
+    const result =
+      document.getElementById("result");
+
+    const format =
+      document.getElementById("format");
+
+    const video =
+      document.getElementById("reader");
+
+
+    async function startScanner() {
+
+      try {
+
+        /*
+         * ZXingの読み取り形式を指定
+         *
+         * EAN_13
+         *   → 通常のJAN
+         *
+         * ITF
+         *   → 今回の18桁候補
+         *
+         * CODE_128
+         *   → 18桁候補
+         */
+        const hints = new Map();
+
+
+        hints.set(
+          ZXing.DecodeHintType.POSSIBLE_FORMATS,
+
+          [
+
+            ZXing.BarcodeFormat.EAN_13,
+
+            ZXing.BarcodeFormat.ITF,
+
+            ZXing.BarcodeFormat.CODE_128
+
           ]
 
-        });
+        );
 
 
-      /*
-       * カメラ起動
-       */
-      const stream =
-        await navigator.mediaDevices.getUserMedia({
-
-          video: {
-            facingMode: {
-              ideal: "environment"
-            },
-
-            width: {
-              ideal: 1280
-            },
-
-            height: {
-              ideal: 720
-            }
-          },
-
-          audio: false
-
-        });
+        /*
+         * より頑張って読み取る
+         */
+        hints.set(
+          ZXing.DecodeHintType.TRY_HARDER,
+          true
+        );
 
 
-      video.srcObject =
-        stream;
-
-
-      await video.play();
-
-
-      result.textContent =
-        "バーコード読み取り中…";
-
-
-      /*
-       * 連続スキャン
-       */
-      scan();
-
-
-      async function scan() {
-
-        try {
-
-          /*
-           * カメラ映像から検出
-           */
-          const barcodes =
-            await detector.detect(video);
-
-
-          if (barcodes.length > 0) {
-
-            const value =
-              barcodes[0].rawValue;
-
-
-            console.log(
-              "★ 読み取り成功 ★",
-              value
-            );
-
-
-            result.textContent =
-              value;
-
-          }
-
-        } catch (error) {
-
-          console.error(
-            "検出エラー:",
-            error
+        /*
+         * ZXing MultiFormat Reader
+         */
+        const codeReader =
+          new ZXingBrowser.BrowserMultiFormatReader(
+            hints
           );
+
+
+        result.textContent =
+          "カメラ起動中…";
+
+
+        format.textContent =
+          "EAN-13 / ITF / CODE-128";
+
+
+        /*
+         * カメラ一覧取得
+         */
+        const devices =
+          await ZXingBrowser
+            .BrowserCodeReader
+            .listVideoInputDevices();
+
+
+        console.log(
+          "カメラ一覧:",
+          devices
+        );
+
+
+        if (
+          !devices ||
+          devices.length === 0
+        ) {
+
+          result.textContent =
+            "カメラが見つかりません";
+
+          format.textContent =
+            "カメラなし";
+
+          return;
 
         }
 
 
         /*
-         * 約30fpsで繰り返す
+         * 最初のカメラを使用
          */
-        requestAnimationFrame(scan);
+        let deviceId =
+          devices[0].deviceId;
+
+
+        /*
+         * 背面カメラを探す
+         */
+        for (
+          const device of devices
+        ) {
+
+          const label =
+            (
+              device.label || ""
+            ).toLowerCase();
+
+
+          if (
+
+            label.includes("back") ||
+
+            label.includes("rear") ||
+
+            label.includes("environment") ||
+
+            label.includes("背面")
+
+          ) {
+
+            deviceId =
+              device.deviceId;
+
+            break;
+
+          }
+
+        }
+
+
+        console.log(
+          "使用カメラ:",
+          deviceId
+        );
+
+
+        result.textContent =
+          "読み取り中…";
+
+
+        format.textContent =
+          "JAN / ITF / CODE-128 を検出中";
+
+
+        /*
+         * 連続読み取り開始
+         */
+        await codeReader.decodeFromVideoDevice(
+
+          deviceId,
+
+          video,
+
+          (resultCode, error) => {
+
+
+            /*
+             * 読み取り成功
+             */
+            if (resultCode) {
+
+              const value =
+                resultCode.getText();
+
+
+              const barcodeFormat =
+                resultCode
+                  .getBarcodeFormat();
+
+
+              console.log(
+                "===================="
+              );
+
+              console.log(
+                "★ 読み取り成功 ★"
+              );
+
+              console.log(
+                "番号:",
+                value
+              );
+
+              console.log(
+                "形式:",
+                barcodeFormat
+              );
+
+              console.log(
+                "===================="
+              );
+
+
+              /*
+               * 画面表示
+               */
+              result.textContent =
+                value;
+
+
+              format.textContent =
+                "形式：" +
+                barcodeFormat;
+
+
+            }
+
+
+            /*
+             * 読み取り失敗は画面に出さない
+             *
+             * 連続スキャンを止めないため
+             */
+
+          }
+
+        );
+
+
+      } catch (error) {
+
+        console.error(
+          "カメラ・読み取りエラー:",
+          error
+        );
+
+
+        result.textContent =
+          "エラー：" +
+          (
+            error.name ||
+            error.message ||
+            String(error)
+          );
+
+
+        format.textContent =
+          "読み取りエラー";
 
       }
 
-
-    } catch (error) {
-
-      console.error(
-        "カメラエラー:",
-        error
-      );
-
-
-      result.textContent =
-        "エラー：" + String(error);
-
     }
 
-  }
 
-</script>
+    /*
+     * 開始
+     */
+    startScanner();
+
+  </script>
 
 
 </body>
