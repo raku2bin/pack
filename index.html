@@ -111,9 +111,9 @@
 //        result.textContent =
 //          "カメラを起動できません";
         console.error("カメラエラー:", error);
-        result.textContent =
-          "エラー：" + (error.name || error.message || error);
-        
+        result.textContent =　"エラー：" + String(error);
+        alert("カメラエラー：" + String(error));
+              
       }
 
     }
