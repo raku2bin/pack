@@ -2,7 +2,6 @@
 <html lang="ja">
 
 <head>
-
   <meta charset="UTF-8">
 
   <meta
@@ -25,7 +24,6 @@
       text-align: center;
     }
 
-    /* ヘッダー */
     header {
       height: 70px;
       background: #12395b;
@@ -38,14 +36,12 @@
       font-weight: bold;
     }
 
-    /* 説明 */
     .message {
       padding: 18px 10px;
       font-size: 22px;
       font-weight: bold;
     }
 
-    /* カメラ部分 */
     .camera-area {
       position: relative;
 
@@ -59,25 +55,19 @@
       overflow: hidden;
     }
 
-    /* カメラ映像 */
     #reader {
       width: 100%;
-      height: auto;
-
       display: block;
-
-      background: #000;
     }
 
-    /* 読み取り枠 */
+    /* 読み取り目安 */
     .scan-frame {
       position: absolute;
 
-      left: 7%;
-      right: 7%;
+      left: 6%;
+      right: 6%;
 
       top: 35%;
-
       height: 30%;
 
       border: 4px solid red;
@@ -85,7 +75,6 @@
       pointer-events: none;
     }
 
-    /* 中央線 */
     .scan-line {
       position: absolute;
 
@@ -101,26 +90,6 @@
       transform: translateY(-50%);
     }
 
-    /* 枠内の説明 */
-    .frame-message {
-      position: absolute;
-
-      left: 0;
-      right: 0;
-
-      bottom: 8%;
-
-      font-size: 20px;
-      font-weight: bold;
-
-      color: white;
-
-      text-shadow:
-        0 2px 4px #000,
-        0 0 5px #000;
-    }
-
-    /* 読み取り結果 */
     #result {
       min-height: 100px;
 
@@ -130,7 +99,7 @@
 
       color: #12395b;
 
-      font-size: 34px;
+      font-size: 32px;
 
       font-weight: bold;
 
@@ -145,212 +114,189 @@
 <body>
 
 
-  <header>
-    らくらく　パック
-  </header>
+<header>
+  らくらく　パック
+</header>
 
 
-  <div class="message">
-    ABC バーコードを枠内に合わせてください
+<div class="message">
+  バーコードを赤枠に合わせてください
+</div>
+
+
+<div class="camera-area">
+
+  <video
+    id="reader"
+    autoplay
+    muted
+    playsinline>
+  </video>
+
+  <div class="scan-frame">
+    <div class="scan-line"></div>
   </div>
 
-
-  <div class="camera-area">
-
-    <video
-      id="reader"
-      autoplay
-      muted
-      playsinline>
-    </video>
+</div>
 
 
-    <div class="scan-frame">
-
-      <div class="scan-line"></div>
-
-    </div>
+<div id="result">
+  確認中…
+</div>
 
 
-    <div class="frame-message">
-      赤い枠にバーコードを合わせてください
-    </div>
+<script>
 
-  </div>
+  const video =
+    document.getElementById("reader");
 
-
-  <div id="result">
-    カメラ起動中…
-  </div>
+  const result =
+    document.getElementById("result");
 
 
-  <!-- ZXing Browser -->
-  <script src="https://unpkg.com/@zxing/browser@latest"></script>
+  /*
+   * BarcodeDetector対応確認
+   */
+  if (!("BarcodeDetector" in window)) {
+
+    result.textContent =
+      "このブラウザはBarcodeDetector非対応";
+
+  } else {
+
+    startScanner();
+
+  }
 
 
-  <script>
+  async function startScanner() {
 
-    const result =
-      document.getElementById("result");
+    try {
 
-    const video =
-      document.getElementById("reader");
+      /*
+       * 読み取り対象
+       *
+       * まずJANを優先
+       */
+      const detector =
+        new BarcodeDetector({
 
+          formats: [
+            "ean_13",
+            "ean_8",
+            "upc_a",
+            "upc_e",
+            "code_128",
+            "itf"
+          ]
 
-    async function startScanner() {
-
-      try {
-
-        /*
-         * 1次元バーコード専用リーダー
-         */
-        const codeReader =
-          new ZXingBrowser.BrowserMultiFormatOneDReader();
-
-
-        /*
-         * カメラ一覧を取得
-         */
-        const devices =
-          await ZXingBrowser.BrowserCodeReader
-            .listVideoInputDevices();
+        });
 
 
-        console.log(
-          "カメラ一覧:",
-          devices
-        );
+      /*
+       * カメラ起動
+       */
+      const stream =
+        await navigator.mediaDevices.getUserMedia({
 
+          video: {
+            facingMode: {
+              ideal: "environment"
+            },
 
-        /*
-         * カメラがない場合
-         */
-        if (
-          !devices ||
-          devices.length === 0
-        ) {
+            width: {
+              ideal: 1280
+            },
 
-          result.textContent =
-            "カメラが見つかりません";
-
-          return;
-        }
-
-
-        /*
-         * 最初のカメラ
-         */
-        let deviceId =
-          devices[0].deviceId;
-
-
-        /*
-         * 背面カメラを探す
-         */
-        for (
-          const device of devices
-        ) {
-
-          const label =
-            (device.label || "")
-              .toLowerCase();
-
-
-          if (
-            label.includes("back") ||
-            label.includes("rear") ||
-            label.includes("environment") ||
-            label.includes("背面")
-          ) {
-
-            deviceId =
-              device.deviceId;
-
-            break;
-          }
-
-        }
-
-
-        console.log(
-          "使用カメラ:",
-          deviceId
-        );
-
-
-        /*
-         * 読み取り開始
-         */
-        result.textContent =
-          "バーコード読み取り中…";
-
-
-        /*
-         * 連続読み取り
-         *
-         * バーコードを検出するたびに
-         * 下のcallbackが実行される
-         */
-        await codeReader.decodeFromVideoDevice(
-
-          deviceId,
-
-          video,
-
-          (resultCode, error) => {
-
-
-            /*
-             * 読み取り成功
-             */
-            if (resultCode) {
-
-              const value =
-                resultCode.getText();
-
-
-              console.log(
-                "★ 読み取り成功 ★",
-                value
-              );
-
-
-              /*
-               * 読み取った数字を表示
-               */
-              result.textContent =
-                value;
-
+            height: {
+              ideal: 720
             }
+          },
+
+          audio: false
+
+        });
+
+
+      video.srcObject =
+        stream;
+
+
+      await video.play();
+
+
+      result.textContent =
+        "バーコード読み取り中…";
+
+
+      /*
+       * 連続スキャン
+       */
+      scan();
+
+
+      async function scan() {
+
+        try {
+
+          /*
+           * カメラ映像から検出
+           */
+          const barcodes =
+            await detector.detect(video);
+
+
+          if (barcodes.length > 0) {
+
+            const value =
+              barcodes[0].rawValue;
+
+
+            console.log(
+              "★ 読み取り成功 ★",
+              value
+            );
+
+
+            result.textContent =
+              value;
 
           }
 
-        );
+        } catch (error) {
+
+          console.error(
+            "検出エラー:",
+            error
+          );
+
+        }
 
 
-      } catch (error) {
-
-
-        console.error(
-          "読み取りエラー:",
-          error
-        );
-
-
-        result.textContent =
-          "エラー：" + String(error);
+        /*
+         * 約30fpsで繰り返す
+         */
+        requestAnimationFrame(scan);
 
       }
 
+
+    } catch (error) {
+
+      console.error(
+        "カメラエラー:",
+        error
+      );
+
+
+      result.textContent =
+        "エラー：" + String(error);
+
     }
 
+  }
 
-    /*
-     * スキャナー開始
-     */
-    startScanner();
-
-  </script>
+</script>
 
 
 </body>
