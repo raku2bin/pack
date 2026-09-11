@@ -2,6 +2,7 @@
 <html lang="ja">
 
 <head>
+
   <meta charset="UTF-8">
 
   <meta
@@ -32,31 +33,41 @@
       align-items: center;
       justify-content: center;
 
-      font-size: 28px;
+      font-size: 30px;
       font-weight: bold;
     }
 
     .message {
       padding: 18px 10px;
-      font-size: 24px;
+      font-size: 25px;
       font-weight: bold;
     }
 
     .camera-area {
       position: relative;
+
       width: 100%;
       max-width: 600px;
+
       margin: 0 auto;
+
       background: #000;
+
       overflow: hidden;
     }
 
     #reader {
       width: 100%;
+      height: auto;
+
       display: block;
+
       background: #000;
     }
 
+    /*
+     * 読み取り範囲
+     */
     .scan-frame {
       position: absolute;
 
@@ -71,6 +82,9 @@
       pointer-events: none;
     }
 
+    /*
+     * 中央ライン
+     */
     .scan-line {
       position: absolute;
 
@@ -86,29 +100,39 @@
       transform: translateY(-50%);
     }
 
+    /*
+     * 読み取り結果
+     */
     #result {
       min-height: 110px;
 
       padding: 20px 10px;
 
       background: white;
+
       color: #12395b;
 
       font-size: 36px;
+
       font-weight: bold;
 
       word-break: break-all;
     }
 
+    /*
+     * バーコード形式
+     */
     #format {
-      min-height: 45px;
+      min-height: 50px;
 
-      padding: 8px;
+      padding: 10px;
 
       background: #ddd;
+
       color: #111;
 
-      font-size: 18px;
+      font-size: 20px;
+
       font-weight: bold;
     }
 
@@ -119,13 +143,14 @@
 
 <body>
 
+
   <header>
     らくらく　パック
   </header>
 
 
   <div class="message">
-    バーコードを赤枠に合わせてください
+    VV バーコードを赤枠に合わせてください
   </div>
 
 
@@ -138,8 +163,11 @@
       playsinline>
     </video>
 
+
     <div class="scan-frame">
+
       <div class="scan-line"></div>
+
     </div>
 
   </div>
@@ -155,8 +183,12 @@
   </div>
 
 
-  <!-- ZXing -->
-  <script src="https://unpkg.com/@zxing/browser@0.1.5/umd/zxing-browser.min.js"></script>
+  <!--
+    ZXing Browser
+  -->
+  <script
+    src="https://unpkg.com/@zxing/browser@0.1.5/umd/zxing-browser.min.js">
+  </script>
 
 
   <script>
@@ -171,14 +203,18 @@
       document.getElementById("reader");
 
 
+    /*
+     * スキャナー開始
+     */
     async function startScanner() {
 
       try {
 
         /*
-         * まずは通常のZXing
+         * ZXing MultiFormatReader
          *
-         * JANが読めていた実績のある方式
+         * まずは今までJANを読めていた
+         * BrowserMultiFormatReaderを使用
          */
         const codeReader =
           new ZXingBrowser.BrowserMultiFormatReader();
@@ -189,7 +225,7 @@
 
 
         format.textContent =
-          "JAN / ITF / CODE-128 を検出中";
+          "EAN-13 / ITF / CODE-128";
 
 
         /*
@@ -207,6 +243,9 @@
         );
 
 
+        /*
+         * カメラがない場合
+         */
         if (
           !devices ||
           devices.length === 0
@@ -215,7 +254,11 @@
           result.textContent =
             "カメラが見つかりません";
 
+          format.textContent =
+            "カメラなし";
+
           return;
+
         }
 
 
@@ -227,28 +270,35 @@
 
 
         /*
-         * 背面カメラ優先
+         * 背面カメラを探す
          */
         for (
           const device of devices
         ) {
 
           const label =
-            (device.label || "")
-              .toLowerCase();
+            (
+              device.label || ""
+            ).toLowerCase();
 
 
           if (
+
             label.includes("back") ||
+
             label.includes("rear") ||
+
             label.includes("environment") ||
+
             label.includes("背面")
+
           ) {
 
             deviceId =
               device.deviceId;
 
             break;
+
           }
 
         }
@@ -264,8 +314,12 @@
           "バーコード読み取り中…";
 
 
+        format.textContent =
+          "JAN / ITF / CODE-128 を検出中";
+
+
         /*
-         * 連続読み取り
+         * 連続読み取り開始
          */
         await codeReader.decodeFromVideoDevice(
 
@@ -275,6 +329,10 @@
 
           (resultCode, error) => {
 
+
+            /*
+             * 読み取り成功
+             */
             if (resultCode) {
 
               const value =
@@ -282,13 +340,25 @@
 
 
               console.log(
-                "★ 読み取り成功 ★",
+                "===================="
+              );
+
+              console.log(
+                "★ 読み取り成功 ★"
+              );
+
+              console.log(
+                "番号:",
                 value
+              );
+
+              console.log(
+                "===================="
               );
 
 
               /*
-               * 読み取った番号
+               * 番号を表示
                */
               result.textContent =
                 value;
@@ -299,19 +369,22 @@
                */
               try {
 
-                const barcodeFormat =
+                const type =
                   resultCode.getBarcodeFormat();
+
 
                 format.textContent =
                   "バーコード形式：" +
-                  barcodeFormat;
+                  type;
+
 
                 console.log(
-                  "形式:",
-                  barcodeFormat
+                  "バーコード形式:",
+                  type
                 );
 
-              } catch (e) {
+              }
+              catch (e) {
 
                 format.textContent =
                   "読み取り成功";
@@ -320,12 +393,21 @@
 
             }
 
+
+            /*
+             * 読み取り失敗は画面に表示しない
+             *
+             * カメラを止めずに
+             * 次のフレームを読む
+             */
+
           }
 
         );
 
 
-      } catch (error) {
+      }
+      catch (error) {
 
         console.error(
           "カメラ・読み取りエラー:",
@@ -350,9 +432,13 @@
     }
 
 
+    /*
+     * ページ読み込み後に開始
+     */
     startScanner();
 
   </script>
+
 
 </body>
 
