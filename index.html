@@ -1,505 +1,145 @@
-```html
 <!DOCTYPE html>
-<html lang="ja">
-
-<head>
-
-  <meta charset="UTF-8">
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0">
-
-  <title>らくらく パック</title>
-
-  <style>
-
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      background: #111;
-      color: white;
-      font-family: sans-serif;
-      text-align: center;
-    }
-
-    header {
-      height: 70px;
-      background: #12395b;
-
-      display: flex;
-      align-items: center;
-      justify-content: center;
-
-      font-size: 30px;
-      font-weight: bold;
-    }
-
-    .message {
-      padding: 18px 10px;
-      font-size: 25px;
-      font-weight: bold;
-    }
-
-    .camera-area {
-      position: relative;
-
-      width: 100%;
-      max-width: 600px;
-
-      margin: 0 auto;
-
-      background: #000;
-
-      overflow: hidden;
-    }
-
-    #reader {
-      width: 100%;
-      height: auto;
-
-      display: block;
-
-      background: #000;
-    }
-
-    .scan-frame {
-      position: absolute;
-
-      left: 4%;
-      right: 4%;
-
-      top: 25%;
-      height: 50%;
-
-      border: 5px solid red;
-
-      pointer-events: none;
-    }
-
-    .scan-line {
-      position: absolute;
-
-      left: 0;
-      right: 0;
-
-      top: 50%;
-
-      height: 3px;
-
-      background: red;
-
-      transform: translateY(-50%);
-    }
-
-    #result {
-      min-height: 110px;
-
-      padding: 20px 10px;
-
-      background: white;
-
-      color: #12395b;
-
-      font-size: 36px;
-
-      font-weight: bold;
-
-      word-break: break-all;
-    }
-
-    #format {
-      min-height: 50px;
-
-      padding: 10px;
-
-      background: #ddd;
-
-      color: #111;
-
-      font-size: 20px;
-
-      font-weight: bold;
-    }
-
-  </style>
-
-</head>
-
-
-<body>
-
-
-  <header>
-    らくらく　パック
-  </header>
-
-
-  <div class="message">
-    バーコードを赤枠に合わせてください
-  </div>
-
-
-  <div class="camera-area">
-
-    <video
-      id="reader"
-      autoplay
-      muted
-      playsinline>
-    </video>
-
-
-    <div class="scan-frame">
-
-      <div class="scan-line"></div>
-
-    </div>
-
-  </div>
-
-
-  <div id="result">
-    カメラ起動中…
-  </div>
-
-
-  <div id="format">
-    JAN / CODE128 読み取り準備中…
-  </div>
-
-
-  <!-- ZXing Browser -->
-
-  <script src="https://unpkg.com/@zxing/browser@0.1.5/umd/zxing-browser.min.js"></script>
-
-
-  <!-- ZXing Library -->
-
-  <script src="https://unpkg.com/@zxing/library@0.21.3"></script>
-
-
-  <script>
-
-    const result =
-      document.getElementById("result");
-
-    const format =
-      document.getElementById("format");
-
-    const video =
-      document.getElementById("reader");
-
-
-    /*
-     * スキャナー開始
-     */
-    async function startScanner() {
-
-      try {
-
-        /*
-         * ZXing確認
-         */
-        if (
-          typeof ZXing === "undefined"
-        ) {
-
-          result.textContent =
-            "ZXingが読み込めません";
-
-          format.textContent =
-            "ライブラリエラー";
-
-          return;
-
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>QRスキャン</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script>
+      const SERVER_URL = "https://script.google.com/macros/s/AKfycbz27tAOy_dx-iLzVdN6odJoB_wFRLUutQNvPz00g37LczepdEXbtdYYhyCcV80QgFtp/exec";
+ 
+      function onScanSuccess(decodedText) {
+
+      // 🔔 ピッピ音
+        playPippi();
+
+ 
+        // 📳 振動する（対応端末のみ）
+        if (navigator.vibrate) {
+          navigator.vibrate([200]); // 200ms
         }
 
-
-        /*
-         * 読み取り対象
-         *
-         * EAN_13
-         * CODE_128
-         *
-         * 今回はCODABARを使用しない
-         */
-        const hints =
-          new Map();
-
-
-        hints.set(
-
-          ZXing.DecodeHintType.POSSIBLE_FORMATS,
-
-          [
-
-            ZXing.BarcodeFormat.EAN_13,
-
-            ZXing.BarcodeFormat.CODE_128
-
-          ]
-
-        );
-
-
-        /*
-         * より強く読み取る
-         */
-        hints.set(
-
-          ZXing.DecodeHintType.TRY_HARDER,
-
-          true
-
-        );
-
-
-        /*
-         * MultiFormatReader
-         */
-        const codeReader =
-          new ZXingBrowser.BrowserMultiFormatReader(
-            hints
-          );
-
-
-        result.textContent =
-          "カメラ起動中…";
-
-
-        format.textContent =
-          "JAN / CODE128 を検出中…";
-
-
-        /*
-         * カメラ一覧取得
-         */
-        const devices =
-          await ZXingBrowser
-            .BrowserCodeReader
-            .listVideoInputDevices();
-
-
-        console.log(
-          "カメラ一覧:",
-          devices
-        );
-
-
-        /*
-         * カメラなし
-         */
-        if (
-          !devices ||
-          devices.length === 0
-        ) {
-
-          result.textContent =
-            "カメラが見つかりません";
-
-          format.textContent =
-            "カメラなし";
-
-          return;
-
-        }
-
-
-        /*
-         * 使用カメラ
-         */
-        let deviceId =
-          devices[0].deviceId;
-
-
-        /*
-         * 背面カメラを優先
-         */
-        for (
-          const device of devices
-        ) {
-
-          const label =
-            (
-              device.label || ""
-            ).toLowerCase();
-
-
-          if (
-
-            label.includes("back") ||
-
-            label.includes("rear") ||
-
-            label.includes("environment") ||
-
-            label.includes("背面")
-
-          ) {
-
-            deviceId =
-              device.deviceId;
-
-            break;
-
-          }
-
-        }
-
-
-        console.log(
-          "使用カメラ:",
-          deviceId
-        );
-
-
-        result.textContent =
-          "バーコード読み取り中…";
-
-
-        format.textContent =
-          "JAN / CODE128";
-
-
-        /*
-         * 連続読み取り
-         */
-        await codeReader.decodeFromVideoDevice(
-
-          deviceId,
-
-          video,
-
-          (resultCode, error) => {
-
-
-            /*
-             * 読み取り成功
-             */
-            if (resultCode) {
-
-              const value =
-                resultCode.getText();
-
-
-              console.log(
-                "======================"
-              );
-
-              console.log(
-                "★ 読み取り成功 ★"
-              );
-
-              console.log(
-                "番号:",
-                value
-              );
-
-
-              /*
-               * バーコード形式
-               */
-              let type =
-                "不明";
-
-
-              try {
-
-                type =
-                  resultCode
-                    .getBarcodeFormat();
-
-              }
-              catch (e) {
-
-                type =
-                  "不明";
-
-              }
-
-
-              console.log(
-                "形式:",
-                type
-              );
-
-
-              /*
-               * 桁数確認
-               *
-               * 今回は18桁CODE128を
-               * まず確認する
-               */
-              console.log(
-                "桁数:",
-                value.length
-              );
-
-
-              /*
-               * 結果表示
-               */
-              result.textContent =
-                value;
-
-
-              format.textContent =
-                "形式：" +
-                type +
-                "　桁数：" +
-                value.length;
-
-
-              console.log(
-                "======================"
-              );
-
+        document.getElementById("result").innerText = "読み取り中: " + decodedText;
+
+        // サーバーに送信
+        fetch(SERVER_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded"
+          },
+          body: new URLSearchParams({
+            page: "scan",
+            code: decodedText
+          }).toString()
+        })
+        .then(res => res.text())
+        .then(text => {
+          document.getElementById("result").innerText = `結果: ${text}`;
+
+          // 3秒後に再開
+          html5QrCode.stop().then(() => {
+            setTimeout(() => {
+              html5QrCode.start(currentCameraId, config, onScanSuccess);
+              document.getElementById("result").innerText = "スキャン待機中...";
+            }, 3000);
+          });
+        })
+        .catch(err => {
+          document.getElementById("result").innerText = "通信エラー";
+        });
+      }
+    </script>
+ 
+ <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        overflow: hidden;
+        background: black;
+      }
+
+      #reader {
+        width: 100vw;
+        height: 100vh;
+        object-fit: cover;
+      }
+
+      #result {
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: white;
+        background: rgba(0,0,0,0.7);
+        padding: 10px;
+        font-size: 18px;
+        border-radius: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="reader"></div>
+    <div id="result">スキャン待機中...</div>
+
+    <script>
+      const SERVER_URL = "https://script.google.com/macros/s/AKfycbz27tAOy_dx-iLzVdN6odJoB_wFRLUutQNvPz00g37LczepdEXbtdYYhyCcV80QgFtp/exec";
+
+      function onScanSuccess(decodedText) {
+        document.getElementById("result").innerText = "読み取り中: " + decodedText;
+
+        // サーバーに送信（code + page=scan）
+        fetch(SERVER_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded"
+          },
+          body: new URLSearchParams({
+            page: "scan",
+            code: decodedText
+          }).toString()
+        })
+        .then(res => res.text())
+        .then(text => {
+          document.getElementById("result").innerText = `結果: ${text}`;
+
+          // 3秒後に再開
+          html5QrCode.stop().then(() => {
+            setTimeout(() => {
+              html5QrCode.start(currentCameraId, config, onScanSuccess);
+              document.getElementById("result").innerText = "スキャン待機中...";
+            }, 3000);
+          });
+        })
+        .catch(err => {
+          document.getElementById("result").innerText = "通信エラー";
+        });
+      }
+
+      const html5QrCode = new Html5Qrcode("reader");
+      let currentCameraId = null;
+      const config = {
+        fps: 10,
+        qrbox: { width: window.innerWidth * 0.8, height: window.innerHeight * 0.8 },
+        aspectRatio: window.innerWidth / window.innerHeight
+      };
+
+      Html5Qrcode.getCameras().then(devices => {
+        if (devices && devices.length) {
+          // 背面カメラを優先
+          currentCameraId = devices[0].id;
+          for (let device of devices) {
+            if (device.label.toLowerCase().includes("back") || device.label.toLowerCase().includes("environment")) {
+              currentCameraId = device.id;
+              break;
             }
-
           }
 
-        );
-
-
-      }
-      catch (error) {
-
-        console.error(
-          "カメラ・読み取りエラー:",
-          error
-        );
-
-
-        result.textContent =
-          "エラー：" +
-          (
-            error.name ||
-            error.message ||
-            String(error)
-          );
-
-
-        format.textContent =
-          "読み取りエラー";
-
-      }
-
-    }
-
-
-    /*
-     * 起動
-     */
-    startScanner();
-
-  </script>
-
-
-</body>
-
+          html5QrCode.start(currentCameraId, config, onScanSuccess);
+        }
+      }).catch(err => {
+        document.getElementById("result").innerText = "カメラ取得エラー";
+        console.error(err);
+      });
+    </script>
+  </body>
 </html>
-```
