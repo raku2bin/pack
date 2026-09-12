@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="ja">
 
@@ -65,9 +66,6 @@
       background: #000;
     }
 
-    /*
-     * 読み取り位置
-     */
     .scan-frame {
       position: absolute;
 
@@ -82,9 +80,6 @@
       pointer-events: none;
     }
 
-    /*
-     * 中央ライン
-     */
     .scan-line {
       position: absolute;
 
@@ -100,9 +95,6 @@
       transform: translateY(-50%);
     }
 
-    /*
-     * 読み取り結果
-     */
     #result {
       min-height: 110px;
 
@@ -119,9 +111,6 @@
       word-break: break-all;
     }
 
-    /*
-     * バーコード形式
-     */
     #format {
       min-height: 50px;
 
@@ -150,7 +139,7 @@
 
 
   <div class="message">
-    はははバーコードを赤枠に合わせてください
+    バーコードを赤枠に合わせてください
   </div>
 
 
@@ -179,7 +168,7 @@
 
 
   <div id="format">
-    JAN / NW-7 読み取り準備中…
+    JAN / CODE128 読み取り準備中…
   </div>
 
 
@@ -213,7 +202,7 @@
       try {
 
         /*
-         * ZXingが読み込まれているか確認
+         * ZXing確認
          */
         if (
           typeof ZXing === "undefined"
@@ -233,8 +222,10 @@
         /*
          * 読み取り対象
          *
-         * EAN-13 = JAN
-         * CODABAR = NW-7
+         * EAN_13
+         * CODE_128
+         *
+         * 今回はCODABARを使用しない
          */
         const hints =
           new Map();
@@ -248,7 +239,7 @@
 
             ZXing.BarcodeFormat.EAN_13,
 
-            ZXing.BarcodeFormat.CODABAR
+            ZXing.BarcodeFormat.CODE_128
 
           ]
 
@@ -281,7 +272,7 @@
 
 
         format.textContent =
-          "JAN / NW-7 を検出中…";
+          "JAN / CODE128 を検出中…";
 
 
         /*
@@ -371,7 +362,7 @@
 
 
         format.textContent =
-          "JAN / NW-7";
+          "JAN / CODE128";
 
 
         /*
@@ -438,6 +429,18 @@
 
 
               /*
+               * 桁数確認
+               *
+               * 今回は18桁CODE128を
+               * まず確認する
+               */
+              console.log(
+                "桁数:",
+                value.length
+              );
+
+
+              /*
                * 結果表示
                */
               result.textContent =
@@ -445,7 +448,10 @@
 
 
               format.textContent =
-                "形式：" + type;
+                "形式：" +
+                type +
+                "　桁数：" +
+                value.length;
 
 
               console.log(
@@ -496,3 +502,4 @@
 </body>
 
 </html>
+```
