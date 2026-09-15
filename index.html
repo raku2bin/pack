@@ -1,756 +1,442 @@
-<html>
 <!DOCTYPE html>
 <html lang="ja">
-
 <head>
-
-  <meta charset="UTF-8">
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0">
-
-  <title>らくらく パック</title>
-
-  <!-- ZXing -->
-  <script src="https://unpkg.com/@zxing/browser@0.1.5/umd/index.min.js"></script>
-
-  <style>
-
-    * {
-      box-sizing: border-box;
-    }
-
-    html,
-    body {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      min-height: 100%;
-
-      background: #111;
-      color: white;
-
-      font-family: sans-serif;
-
-      text-align: center;
-    }
-
-
-    /* ================================
-       ヘッダー
-    ================================= */
-
-    header {
-
-      height: 70px;
-
-      background: #12395b;
-
-      display: flex;
-
-      align-items: center;
-
-      justify-content: center;
-
-      font-size: 30px;
-
-      font-weight: bold;
-    }
-
-
-    /* ================================
-       説明
-    ================================= */
-
-    .message {
-
-      padding: 10px;
-
-      font-size: 20px;
-
-      font-weight: bold;
-
-      background: #111;
-    }
-
-
-    /* ================================
-       カメラエリア
-    ================================= */
-
-    .camera-area {
-
-      position: relative;
-
-      width: 100%;
-
-      max-width: 500px;
-
-      height: 260px;
-
-      margin: 0 auto;
-
-      background: #000;
-
-      overflow: hidden;
-    }
-
-
-    /* ================================
-       カメラ
-    ================================= */
-
-    #reader {
-
-      width: 100%;
-
-      height: 260px;
-
-      display: block;
-
-      background: #000;
-
-      object-fit: cover;
-    }
-
-
-    /* ================================
-       赤枠
-    ================================= */
-
-    .scan-frame {
-
-      position: absolute;
-
-      left: 5%;
-
-      right: 5%;
-
-      top: 25%;
-
-      height: 50%;
-
-      border: 4px solid red;
-
-      pointer-events: none;
-    }
-
-
-    /* ================================
-       赤ライン
-    ================================= */
-
-    .scan-line {
-
-      position: absolute;
-
-      left: 0;
-
-      right: 0;
-
-      top: 50%;
-
-      height: 3px;
-
-      background: red;
-
-      transform: translateY(-50%);
-
-      pointer-events: none;
-    }
-
-
-    /* ================================
-       状態
-    ================================= */
-
-    #status {
-
-      padding: 8px;
-
-      font-size: 18px;
-
-      font-weight: bold;
-
-      background: #333;
-    }
-
-
-    /* ================================
-       結果
-    ================================= */
-
-    #result {
-
-      min-height: 70px;
-
-      padding: 12px 8px;
-
-      background: white;
-
-      color: #12395b;
-
-      font-size: 30px;
-
-      font-weight: bold;
-
-      word-break: break-all;
-    }
-
-
-    /* ================================
-       種類
-    ================================= */
-
-    #format {
-
-      min-height: 40px;
-
-      padding: 8px;
-
-      background: #ddd;
-
-      color: #111;
-
-      font-size: 18px;
-
-      font-weight: bold;
-    }
-
-
-    /* ================================
-       検品
-    ================================= */
-
-    #inspection {
-
-      padding: 15px 10px;
-
-      background: #222;
-
-      min-height: 90px;
-    }
-
-
-    #inspectionTitle {
-
-      font-size: 22px;
-
-      font-weight: bold;
-
-      margin-bottom: 6px;
-    }
-
-
-    #inspectionMessage {
-
-      font-size: 20px;
-
-      font-weight: bold;
-    }
-
-
-    /* ================================
-       色
-    ================================= */
-
-    .jan {
-
-      color: #00ff66;
-    }
-
-
-    .kiykcd {
-
-      color: #00ccff;
-    }
-
-
-    .error {
-
-      color: #ff4444;
-    }
-
-  </style>
-
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>らくらく パック</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #111;
+  color: white;
+  font-family: sans-serif;
+  text-align: center;
+}
+
+header {
+  height: 70px;
+  background: #12395b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  font-weight: bold;
+}
+
+#status {
+  padding: 12px 5px;
+  font-size: 18px;
+  min-height: 45px;
+}
+
+#cameraBox {
+  position: relative;
+  width: 100%;
+  max-width: 500px;
+  height: 300px;
+  margin: 0 auto;
+  overflow: hidden;
+  background: #000;
+}
+
+#reader {
+  width: 100%;
+  height: 300px;
+  object-fit: cover;
+  display: block;
+}
+
+#frame {
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  top: 25%;
+  height: 50%;
+  border: 3px solid red;
+  pointer-events: none;
+}
+
+#message {
+  margin-top: 15px;
+  font-size: 20px;
+  min-height: 30px;
+}
+
+button {
+  margin-top: 15px;
+  padding: 12px 25px;
+  font-size: 18px;
+}
+</style>
 </head>
-
 
 <body>
 
+<header>
+  らくらく パック
+</header>
 
-  <!-- ================================
-       ヘッダー
-  ================================= -->
+<div id="status">
+  カメラ起動中...
+</div>
 
-  <header>
+<div id="cameraBox">
 
-    らくらく　パック
+  <video
+    id="reader"
+    autoplay
+    muted
+    playsinline>
+  </video>
 
-  </header>
+  <div id="frame"></div>
 
+</div>
 
-  <!-- ================================
-       説明
-  ================================= -->
+<div id="message">
+  バーコードをかざしてください
+</div>
 
-  <div class="message">
+<button id="startButton">
+  カメラを開始
+</button>
 
-    バーコードを赤枠に合わせてください
-
-  </div>
-
-
-  <!-- ================================
-       カメラ
-  ================================= -->
-
-  <div class="camera-area">
-
-    <video
-      id="reader"
-      autoplay
-      muted
-      playsinline>
-    </video>
-
-
-    <div class="scan-frame">
-
-      <div class="scan-line"></div>
-
-    </div>
-
-  </div>
-
-
-  <!-- ================================
-       状態
-  ================================= -->
-
-  <div id="status">
-
-    カメラ起動中...
-
-  </div>
-
-
-  <!-- ================================
-       読み取り結果
-  ================================= -->
-
-  <div id="result">
-
-    読み取り待機中
-
-  </div>
-
-
-  <!-- ================================
-       バーコード種類
-  ================================= -->
-
-  <div id="format">
-
-    -
-
-  </div>
-
-
-  <!-- ================================
-       検品状態
-  ================================= -->
-
-  <div id="inspection">
-
-    <div id="inspectionTitle">
-
-      検品状態
-
-    </div>
-
-
-    <div id="inspectionMessage">
-
-      JANコードを読み取ってください
-
-    </div>
-
-  </div>
-
-
+<!-- ZXing -->
+<script src="https://unpkg.com/@zxing/browser@0.1.5/umd/index.min.js"></script>
 
 <script>
 
+let codeReader = null;
+let scanning = false;
+let lastCode = "";
+let lastTime = 0;
 
-  // ==========================================
-  // HTML要素
-  // ==========================================
-
-  const video =
-    document.getElementById("reader");
-
-  const result =
-    document.getElementById("result");
-
-  const format =
-    document.getElementById("format");
-
-  const status =
-    document.getElementById("status");
-
-  const inspectionMessage =
-    document.getElementById(
-      "inspectionMessage"
-    );
+const video = document.getElementById("reader");
+const statusText = document.getElementById("status");
+const message = document.getElementById("message");
+const startButton = document.getElementById("startButton");
 
 
-  // ==========================================
-  // 重複防止
-  // ==========================================
+/* =========================
+   ビープ音
+========================= */
 
-  let lastCode = "";
+function beep() {
 
-  let lastReadTime = 0;
+  try {
 
-  const DUPLICATE_WAIT = 500;
+    const AudioContext =
+      window.AudioContext ||
+      window.webkitAudioContext;
+
+    if (!AudioContext) return;
+
+    const audioContext = new AudioContext();
+
+    const oscillator =
+      audioContext.createOscillator();
+
+    const gain =
+      audioContext.createGain();
+
+    oscillator.type = "square";
+    oscillator.frequency.value = 1800;
+
+    gain.gain.value = 0.08;
+
+    oscillator.connect(gain);
+    gain.connect(audioContext.destination);
+
+    oscillator.start();
+
+    setTimeout(() => {
+
+      oscillator.stop();
+      audioContext.close();
+
+    }, 80);
+
+  } catch (e) {
+
+    console.log("beep error:", e);
+
+  }
+
+}
 
 
-  // ==========================================
-  // ZXing
-  // ==========================================
+/* =========================
+   バーコード処理
+========================= */
 
-  let codeReader = null;
+function processBarcode(code) {
+
+  const now = Date.now();
+
+  /*
+    同じバーコードを連続して
+    何十回も処理しない
+  */
+
+  if (
+    code === lastCode &&
+    now - lastTime < 800
+  ) {
+    return;
+  }
+
+  lastCode = code;
+  lastTime = now;
+
+  console.log("読み取り:", code);
+
+  beep();
+
+  /*
+    JAN
+  */
+
+  if (
+    /^\d+$/.test(code) &&
+    (
+      code.length === 8 ||
+      code.length === 12 ||
+      code.length === 13
+    )
+  ) {
+
+    statusText.textContent = "JAN 読み取り";
+
+    message.textContent = code;
+
+    return;
+  }
 
 
-  // ==========================================
-  // カメラ開始
-  // ==========================================
+  /*
+    18桁コード
+    今回は確認用として読み取る
+  */
 
-  function startScanner() {
+  if (
+    /^\d{18}$/.test(code)
+  ) {
 
-    try {
+    statusText.textContent = "18桁コード 読み取り";
 
-      status.textContent =
-        "カメラ起動中...";
+    message.textContent = code;
 
-
-      // --------------------------------------
-      // ZXingリーダー
-      // --------------------------------------
-
-      codeReader =
-        new ZXingBrowser.BrowserMultiFormatReader();
+    return;
+  }
 
 
-      // --------------------------------------
-      // ZXingにカメラ起動を任せる
-      // --------------------------------------
+  /*
+    その他
+  */
 
-      codeReader.decodeFromConstraints(
+  statusText.textContent = "読み取り";
 
-        {
+  message.textContent = code;
 
-          video: {
+}
 
-            facingMode: {
-              ideal: "environment"
-            },
 
-            width: {
-              ideal: 1280
-            },
+/* =========================
+   カメラ開始
+========================= */
 
-            height: {
-              ideal: 720
-            }
+async function startCamera() {
 
-          },
+  if (scanning) {
+    return;
+  }
 
-          audio: false
+  statusText.textContent =
+    "カメラを起動しています...";
 
+  message.textContent =
+    "少しお待ちください";
+
+  try {
+
+    /*
+      まずブラウザから直接
+      カメラを取得する
+    */
+
+    const stream =
+      await navigator.mediaDevices.getUserMedia({
+
+        video: {
+          facingMode: {
+            ideal: "environment"
+          }
         },
 
-        video,
+        audio: false
 
-        function (
-          resultData,
-          error
-        ) {
+      });
 
 
-          // ----------------------------------
-          // 読み取りなし
-          // ----------------------------------
+    /*
+      カメラ映像を表示
+    */
 
-          if (!resultData) {
+    video.srcObject = stream;
 
-            return;
-
-          }
+    await video.play();
 
 
-          // ----------------------------------
-          // 読み取り値
-          // ----------------------------------
+    statusText.textContent =
+      "カメラ起動OK";
+
+    message.textContent =
+      "バーコードをかざしてください";
+
+
+    /*
+      カメラ表示を確認してから
+      ZXingを開始
+    */
+
+    startZXing();
+
+  } catch (error) {
+
+    console.error(
+      "カメラエラー:",
+      error
+    );
+
+    statusText.textContent =
+      "カメラ読み取りエラー";
+
+    message.textContent =
+      "カメラを起動できません";
+
+    scanning = false;
+
+  }
+
+}
+
+
+/* =========================
+   ZXing開始
+========================= */
+
+function startZXing() {
+
+  if (scanning) {
+    return;
+  }
+
+  try {
+
+    if (
+      typeof ZXingBrowser === "undefined"
+    ) {
+
+      statusText.textContent =
+        "読み取り開始エラー";
+
+      message.textContent =
+        "バーコードライブラリを読み込めません";
+
+      return;
+    }
+
+
+    codeReader =
+      new ZXingBrowser.BrowserMultiFormatReader();
+
+
+    scanning = true;
+
+    statusText.textContent =
+      "読み取り待機中";
+
+
+    /*
+      すでに表示している
+      video要素をZXingに使用
+    */
+
+    codeReader.decodeFromVideoElement(
+      video,
+      (result, error) => {
+
+        if (result) {
 
           const text =
-            resultData.getText();
-
-
-          const now =
-            Date.now();
-
-
-          // ----------------------------------
-          // 重複防止
-          // ----------------------------------
-
-          if (
-
-            text === lastCode &&
-
-            now - lastReadTime <
-            DUPLICATE_WAIT
-
-          ) {
-
-            return;
-
-          }
-
-
-          lastCode =
-            text;
-
-          lastReadTime =
-            now;
-
-
-          // ----------------------------------
-          // 処理
-          // ----------------------------------
+            result.getText();
 
           processBarcode(text);
 
         }
 
-      );
-
-
-      status.textContent =
-        "スキャン待機中";
-
-
-    } catch (error) {
-
-      console.error(
-        "ZXing起動エラー:",
-        error
-      );
-
-
-      status.textContent =
-        "カメラ読み取りエラー";
-
-
-      result.textContent =
-        "読み取り開始エラー";
-
-    }
-
-  }
-
-
-  // ==========================================
-  // バーコード処理
-  // ==========================================
-
-  function processBarcode(text) {
-
-
-    console.log(
-      "読み取り:",
-      text
+      }
     );
 
 
-    result.textContent =
-      text;
+  } catch (error) {
 
+    console.error(
+      "ZXingエラー:",
+      error
+    );
 
-    // ========================================
-    // JAN
-    // ========================================
+    scanning = false;
 
-    if (
+    statusText.textContent =
+      "読み取り開始エラー";
 
-      /^[0-9]{8}$/.test(text) ||
-
-      /^[0-9]{12}$/.test(text) ||
-
-      /^[0-9]{13}$/.test(text)
-
-    ) {
-
-
-      result.className =
-        "jan";
-
-
-      format.textContent =
-        "JAN";
-
-
-      inspectionMessage.textContent =
-        "JAN読み取り";
-
-
-      beep();
-
-
-      return;
-
-    }
-
-
-    // ========================================
-    // 18桁
-    // ========================================
-
-    if (
-      /^[0-9]{18}$/.test(text)
-    ) {
-
-
-      result.className =
-        "kiykcd";
-
-
-      format.textContent =
-        "KIYKCD / 18桁";
-
-
-      inspectionMessage.textContent =
-        "KIYKCD読み取り";
-
-
-      beep();
-
-
-      return;
-
-    }
-
-
-    // ========================================
-    // その他
-    // ========================================
-
-    result.className =
-      "error";
-
-
-    format.textContent =
-      "その他";
-
-
-    inspectionMessage.textContent =
-      "未対応コード";
+    message.textContent =
+      "読み取りを開始できません";
 
   }
 
-
-  // ==========================================
-  // ピッ音
-  // ==========================================
-
-  function beep() {
-
-    try {
+}
 
 
-      const AudioContext =
-        window.AudioContext ||
-        window.webkitAudioContext;
+/* =========================
+   開始ボタン
+========================= */
 
+startButton.addEventListener(
+  "click",
+  () => {
 
-      const audioContext =
-        new AudioContext();
-
-
-      const oscillator =
-        audioContext.createOscillator();
-
-
-      const gain =
-        audioContext.createGain();
-
-
-      oscillator.frequency.value =
-        1800;
-
-
-      oscillator.type =
-        "square";
-
-
-      gain.gain.value =
-        0.08;
-
-
-      oscillator.connect(
-        gain
-      );
-
-
-      gain.connect(
-        audioContext.destination
-      );
-
-
-      oscillator.start();
-
-
-      oscillator.stop(
-
-        audioContext.currentTime +
-        0.08
-
-      );
-
-
-    } catch (e) {
-
-      console.log(
-        "音声エラー",
-        e
-      );
-
-    }
+    startCamera();
 
   }
+);
 
 
-  // ==========================================
-  // ページ読み込み後
-  // ==========================================
+/* =========================
+   ページ読み込み
+========================= */
 
-  window.addEventListener(
-    "load",
-    function () {
+window.addEventListener(
+  "load",
+  () => {
 
-      startScanner();
+    /*
+      ページを開いたら
+      自動でカメラ開始
+    */
 
-    }
-  );
+    startCamera();
 
+  }
+);
 
 </script>
 
-
 </body>
-
-</html>
-
