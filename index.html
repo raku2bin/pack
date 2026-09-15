@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
   <meta charset="UTF-8">
 
@@ -8,6 +9,9 @@
     content="width=device-width, initial-scale=1.0">
 
   <title>らくらく パック</title>
+
+  <!-- ZXing -->
+  <script src="https://unpkg.com/@zxing/browser@0.2.1"></script>
 
   <style>
     * {
@@ -48,11 +52,10 @@
       object-fit: cover;
     }
 
-    /* 読み取り目安枠 */
     #scanFrame {
       position: absolute;
-      left: 10%;
-      right: 10%;
+      left: 5%;
+      right: 5%;
       top: 30%;
       height: 40%;
       border: 3px solid red;
@@ -70,16 +73,14 @@
       font-size: 28px;
       font-weight: bold;
       min-height: 40px;
+      word-break: break-all;
     }
 
-    #startButton {
-      margin-top: 15px;
-      padding: 12px 30px;
+    #type {
+      margin-top: 5px;
       font-size: 18px;
-      border: none;
-      border-radius: 8px;
-      background: #236fa5;
-      color: white;
+      color: #aaa;
+      min-height: 25px;
     }
   </style>
 </head>
@@ -104,33 +105,39 @@
   </div>
 
   <div id="status">
-    カメラ起動中...
+    読み取り準備中...
   </div>
 
   <div id="result"></div>
 
-  <!-- カメラ起動できない場合の予備ボタン -->
-  <button id="startButton">
-    カメラを開始
-  </button>
+  <div id="type"></div>
+
 
   <script>
 
-    const video = document.getElementById("reader");
-    const status = document.getElementById("status");
-    const result = document.getElementById("result");
-    const startButton = document.getElementById("startButton");
+    const video =
+      document.getElementById("reader");
 
-    let stream = null;
-    let detector = null;
-    let scanning = false;
+    const status =
+      document.getElementById("status");
+
+    const result =
+      document.getElementById("result");
+
+    const type =
+      document.getElementById("type");
+
+
+    let codeReader = null;
+
     let lastCode = "";
+
     let lastTime = 0;
 
 
-    // =========================
-    // 音
-    // =========================
+    // ==========================
+    // ピッ音
+    // ==========================
 
     function beep() {
 
@@ -140,225 +147,189 @@
           window.AudioContext ||
           window.webkitAudioContext;
 
-        const audioContext =
+        const ctx =
           new AudioContext();
 
-        const oscillator =
-          audioContext.createOscillator();
+        const osc =
+          ctx.createOscillator();
 
         const gain =
-          audioContext.createGain();
+          ctx.createGain();
 
-        oscillator.type = "square";
+        osc.type = "square";
 
-        oscillator.frequency.value = 1800;
+        osc.frequency.value = 1800;
 
         gain.gain.value = 0.08;
 
-        oscillator.connect(gain);
+        osc.connect(gain);
 
-        gain.connect(audioContext.destination);
+        gain.connect(ctx.destination);
 
-        oscillator.start();
+        osc.start();
 
-        oscillator.stop(
-          audioContext.currentTime + 0.08
+        osc.stop(
+          ctx.currentTime + 0.08
         );
 
       } catch (e) {
-        // 音が使えない場合は無視
+
       }
+
     }
 
 
-    // =========================
-    // カメラ起動
-    // =========================
+    // ==========================
+    // バーコード処理
+    // ==========================
 
-    async function startCamera() {
+    function processBarcode(
+      text,
+      format
+    ) {
 
-      if (scanning) {
+      const now =
+        Date.now();
+
+
+      // 同じコードの連続反応を抑える
+      if (
+        text === lastCode &&
+        now - lastTime < 500
+      ) {
         return;
       }
 
-      status.textContent =
-        "カメラを起動しています...";
+
+      lastCode = text;
+
+      lastTime = now;
+
+
+      result.textContent = text;
+
+      type.textContent =
+        "形式: " + format;
+
+
+      beep();
+
+
+      if (
+        navigator.vibrate
+      ) {
+
+        navigator.vibrate(40);
+
+      }
+
+
+      console.log(
+        "読み取り:",
+        text,
+        "形式:",
+        format
+      );
+
+    }
+
+
+    // ==========================
+    // カメラ開始
+    // ==========================
+
+    async function startScanner() {
 
       try {
 
-        stream =
-          await navigator.mediaDevices.getUserMedia({
-
-            video: {
-              facingMode: {
-                ideal: "environment"
-              },
-
-              width: {
-                ideal: 1280
-              },
-
-              height: {
-                ideal: 720
-              }
-            },
-
-            audio: false
-          });
+        status.textContent =
+          "カメラを起動しています...";
 
 
-        video.srcObject = stream;
-
-        await video.play();
-
-
-        // =========================
-        // BarcodeDetector確認
-        // =========================
-
-        if (!("BarcodeDetector" in window)) {
+        // ZXingが読み込まれているか確認
+        if (
+          typeof ZXingBrowser ===
+          "undefined"
+        ) {
 
           status.textContent =
-            "このブラウザは高速JAN読み取りに対応していません。";
+            "バーコードライブラリを読み込めません";
 
           return;
         }
 
 
-        // JANだけを対象にする
-        detector =
-          new BarcodeDetector({
-
-            formats: [
-              "ean_13",
-              "ean_8",
-              "upc_a",
-              "upc_e"
-            ]
-
-          });
+        /*
+         * EAN-13 と CODE128 を含む
+         * 1次元バーコードを対象にする
+         */
+        codeReader =
+          new ZXingBrowser.BrowserMultiFormatOneDReader();
 
 
-        scanning = true;
+        const controls =
+          await codeReader.decodeFromVideoDevice(
+            undefined,
+            video,
+            (resultObj, error) => {
+
+              if (resultObj) {
+
+                const text =
+                  resultObj.getText();
+
+                const format =
+                  resultObj
+                    .getBarcodeFormat()
+                    .toString();
+
+
+                processBarcode(
+                  text,
+                  format
+                );
+
+              }
+
+            }
+          );
+
 
         status.textContent =
-          "JAN読み取り中";
+          "JAN / CODE128 読み取り中";
 
-        scanLoop();
+
+        window.scannerControls =
+          controls;
+
 
       } catch (error) {
 
         console.error(error);
 
         status.textContent =
-          "カメラを起動できません";
+          "読み取り開始エラー";
 
       }
+
     }
 
 
-    // =========================
-    // JAN読み取りループ
-    // =========================
-
-    async function scanLoop() {
-
-      if (!scanning) {
-        return;
-      }
-
-      if (
-        video.readyState >=
-        HTMLMediaElement.HAVE_ENOUGH_DATA
-      ) {
-
-        try {
-
-          const codes =
-            await detector.detect(video);
-
-
-          if (codes.length > 0) {
-
-            const code =
-              codes[0].rawValue;
-
-
-            // JAN以外を無視
-            if (
-              /^\d{8}$/.test(code) ||
-              /^\d{12}$/.test(code) ||
-              /^\d{13}$/.test(code)
-            ) {
-
-              const now =
-                Date.now();
-
-
-              // 同じJANを連続して鳴らし続けない
-              if (
-                code !== lastCode ||
-                now - lastTime > 700
-              ) {
-
-                lastCode = code;
-                lastTime = now;
-
-                result.textContent = code;
-
-                beep();
-
-                if (
-                  navigator.vibrate
-                ) {
-                  navigator.vibrate(40);
-                }
-
-              }
-
-            }
-
-          }
-
-        } catch (error) {
-
-          console.log(
-            "読み取り中:",
-            error
-          );
-
-        }
-
-      }
-
-
-      // 高速連続スキャン
-      requestAnimationFrame(scanLoop);
-    }
-
-
-    // =========================
-    // ボタン
-    // =========================
-
-    startButton.addEventListener(
-      "click",
-      startCamera
-    );
-
-
-    // =========================
-    // ページ表示時に自動起動
-    // =========================
+    // ==========================
+    // 開始
+    // ==========================
 
     window.addEventListener(
       "load",
       () => {
-        startCamera();
+
+        startScanner();
+
       }
     );
 
   </script>
 
 </body>
+
 </html>
