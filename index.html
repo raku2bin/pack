@@ -3,17 +3,14 @@
 <html lang="ja">
 
 <head>
-
   <meta charset="UTF-8">
 
-<meta
- name="viewport"
- content="width=device-width, initial-scale=1.0">
+<meta name="viewport"
+     content="width=device-width, initial-scale=1.0">
 
   <title>らくらく パック</title>
 
   <style>
-
     * {
       box-sizing: border-box;
     }
@@ -39,8 +36,8 @@
     #cameraArea {
       position: relative;
       width: 100%;
-      max-width: 500px;
-      height: 300px;
+      max-width: 600px;
+      height: 360px;
       margin: 15px auto 0;
       overflow: hidden;
       background: #000;
@@ -54,8 +51,8 @@
 
     #scanFrame {
       position: absolute;
-      left: 5%;
-      right: 5%;
+      left: 3%;
+      right: 3%;
       top: 30%;
       height: 40%;
       border: 3px solid red;
@@ -64,10 +61,23 @@
 
     #status {
       margin-top: 15px;
-      font-size: 20px;
+      font-size: 22px;
       color: #ccc;
     }
 
+    #result {
+      margin-top: 15px;
+      font-size: 28px;
+      font-weight: bold;
+      min-height: 40px;
+      word-break: break-all;
+    }
+
+    #format {
+      margin-top: 8px;
+      font-size: 18px;
+      color: #aaa;
+    }
   </style>
 
 </head>
@@ -94,8 +104,16 @@
   </div>
 
   <div id="status">
-    起動処理を開始します...
+    読み取り準備中...
   </div>
+
+  <div id="result"></div>
+
+  <div id="format"></div>
+
+  <!-- ZXing -->
+
+  <script src="https://unpkg.com/@zxing/browser@0.2.1"></script>
 
   <script>
 
@@ -105,70 +123,58 @@
     const status =
       document.getElementById("status");
 
+    const resultText =
+      document.getElementById("result");
+
+    const formatText =
+      document.getElementById("format");
+
+
+    let lastValue = "";
+    let lastTime = 0;
+
 
     // ==========================
-    // カメラだけ起動
+    // ビープ音
     // ==========================
 
-    async function startCamera() {
-
-      status.textContent =
-        "カメラを起動しています...";
-
+    function beep() {
 
       try {
 
-        const stream =
-          await navigator.mediaDevices.getUserMedia({
+        const AudioContext =
+          window.AudioContext ||
+          window.webkitAudioContext;
 
-            video: {
-              facingMode: {
-                ideal: "environment"
-              },
+        const audioContext =
+          new AudioContext();
 
-              width: {
-                ideal: 1280
-              },
+        const oscillator =
+          audioContext.createOscillator();
 
-              height: {
-                ideal: 720
-              }
-            },
+        const gain =
+          audioContext.createGain();
 
-            audio: false
+        oscillator.frequency.value = 1800;
+        oscillator.type = "square";
 
-          });
+        gain.gain.value = 0.08;
 
+        oscillator.connect(gain);
+        gain.connect(audioContext.destination);
 
-        video.srcObject =
-          stream;
+        oscillator.start();
 
+        setTimeout(() => {
 
-        await video.play();
+          oscillator.stop();
+          audioContext.close();
 
+        }, 80);
 
-        status.textContent =
-          "カメラ起動成功";
+      } catch (e) {
 
-
-        console.log(
-          "カメラ起動成功"
-        );
-
-
-      } catch (error) {
-
-        console.error(
-          "カメラエラー:",
-          error
-        );
-
-
-        status.textContent =
-          "カメラエラー: " +
-          error.name +
-          " / " +
-          error.message;
+        console.log("beep error", e);
 
       }
 
@@ -176,24 +182,202 @@
 
 
     // ==========================
-    // ページ起動
+    // 読み取り成功
     // ==========================
 
-    if (
-      document.readyState ===
-      "loading"
-    ) {
+    function onBarcode(result) {
 
-      document.addEventListener(
-        "DOMContentLoaded",
-        startCamera
+      if (!result) {
+        return;
+      }
+
+
+      const text =
+        result.getText();
+
+
+      const now =
+        Date.now();
+
+
+      // 同じバーコードを連続表示しない
+      if (
+        text === lastValue &&
+        now - lastTime < 800
+      ) {
+        return;
+      }
+
+
+      lastValue = text;
+      lastTime = now;
+
+
+      resultText.textContent =
+        text;
+
+
+      if (result.getBarcodeFormat) {
+
+        formatText.textContent =
+          "形式: " +
+          result.getBarcodeFormat();
+
+      }
+
+
+      status.textContent =
+        "読み取り成功";
+
+
+      beep();
+
+
+      if (
+        navigator.vibrate
+      ) {
+
+        navigator.vibrate(60);
+
+      }
+
+
+      console.log(
+        "BARCODE:",
+        text
       );
 
-    } else {
+    }
 
-      startCamera();
+
+    // ==========================
+    // ZXing開始
+    // ==========================
+
+    async function startScanner() {
+
+      status.textContent =
+        "ZXingを読み込んでいます...";
+
+
+      // ZXing自体が読み込まれているか確認
+      if (
+        typeof ZXingBrowser ===
+        "undefined"
+      ) {
+
+        status.textContent =
+          "ZXing読み込み失敗";
+
+        console.error(
+          "ZXingBrowser が存在しません"
+        );
+
+        return;
+
+      }
+
+
+      console.log(
+        "ZXingBrowser:",
+        ZXingBrowser
+      );
+
+
+      // 1D専用リーダー
+      const codeReader =
+        new ZXingBrowser
+          .BrowserMultiFormatOneDReader();
+
+
+      status.textContent =
+        "バーコード読み取り開始";
+
+
+      try {
+
+        const controls =
+          await codeReader.decodeFromVideoDevice(
+
+            undefined,
+
+            video,
+
+            (result, error) => {
+
+              // 読み取り成功
+              if (result) {
+
+                onBarcode(result);
+
+                return;
+
+              }
+
+
+              // 読み取り失敗は通常状態なので
+              // 画面には表示しない
+              if (error) {
+
+                console.log(
+                  "scan:",
+                  error.name || error
+                );
+
+              }
+
+            }
+
+          );
+
+
+        console.log(
+          "ZXing scanner started",
+          controls
+        );
+
+
+        status.textContent =
+          "スキャン中";
+
+
+      } catch (error) {
+
+        console.error(
+          "ZXing開始エラー:",
+          error
+        );
+
+
+        status.textContent =
+          "ZXing開始エラー: " +
+          (
+            error.message ||
+            error
+          );
+
+      }
 
     }
+
+
+    // ==========================
+    // 起動
+    // ==========================
+
+    window.addEventListener(
+      "load",
+      () => {
+
+        console.log(
+          "ページ読み込み完了"
+        );
+
+
+        startScanner();
+
+      }
+    );
 
   </script>
 
