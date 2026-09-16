@@ -1,100 +1,23 @@
 <!DOCTYPE html>
 <html lang="ja">
-<head>
-  <meta charset="UTF-8">
-<meta
- name="viewport"
- content="width=device-width, initial-scale=1.0">
+<head> <meta charset="UTF-8">
 
-  <title>らくらくちちち パック</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- ZXing Browser -->
+<title>らくらく パック</title>
 
-  <script src="https://unpkg.com/@zxing/browser@0.2.1"></script>
+<script src="https://unpkg.com/@zxing/browser@0.2.1"></script>
 
-  <style>
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      background: #111;
-      color: white;
-      font-family: sans-serif;
-      text-align: center;
-    }
-
-    header {
-      height: 70px;
-      background: #12395b;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 30px;
-      font-weight: bold;
-    }
-
-    #cameraArea {
-      position: relative;
-      width: 100%;
-      max-width: 500px;
-      height: 300px;
-      margin: 15px auto 0;
-      overflow: hidden;
-      background: #000;
-    }
-
-    #reader {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
-    #scanFrame {
-      position: absolute;
-      left: 5%;
-      right: 5%;
-      top: 30%;
-      height: 40%;
-      border: 3px solid red;
-      pointer-events: none;
-    }
-
-    #status {
-      margin-top: 12px;
-      font-size: 18px;
-      color: #ccc;
-    }
-
-    #result {
-      margin-top: 15px;
-      padding: 0 10px;
-      font-size: 28px;
-      font-weight: bold;
-      min-height: 40px;
-      word-break: break-all;
-    }
-
-    #type {
-      margin-top: 5px;
-      font-size: 18px;
-      color: #aaa;
-      min-height: 25px;
-    }
-  </style>
+<style> * { box-sizing: border-box; } body { margin: 0; background: #111; color: white; font-family: sans-serif; text-align: center; } header { height: 70px; background: #12395b; display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: bold; } #cameraArea { position: relative; width: 100%; max-width: 500px; height: 300px; margin: 15px auto 0; overflow: hidden; background: #000; } #reader { width: 100%; height: 100%; object-fit: cover; } #scanFrame { position: absolute; left: 5%; right: 5%; top: 30%; height: 40%; border: 3px solid red; pointer-events: none; } #status { margin-top: 12px; font-size: 18px; color: #ccc; } #result { margin-top: 15px; padding: 0 10px; font-size: 28px; font-weight: bold; min-height: 40px; word-break: break-all; } #type { margin-top: 5px; font-size: 18px; color: #aaa; min-height: 25px; } </style>
 
 </head>
 
 <body>
 
-  <header>
-    らくらく パックB
-  </header>
+<header> らくらく パック </header>
 
-  <div id="cameraArea">
+<div id="cameraArea">
 
-```
 <video
   id="reader"
   autoplay
@@ -103,295 +26,17 @@
 </video>
 
 <div id="scanFrame"></div>
-```
 
-  </div>
+</div>
 
-  <div id="status">
-    読み取り準備中...
-  </div>
+<div id="status"> 読み取り準備中... </div>
 
-  <div id="result"></div>
+<div id="result"></div>
 
-  <div id="type"></div>
+<div id="type"></div>
 
-  <script>
+<script> const video = document.getElementById("reader"); const status = document.getElementById("status"); const result = document.getElementById("result"); const type = document.getElementById("type"); let codeReader = null; let scannerControls = null; let lastCode = ""; let lastTime = 0; // ========================== // ピッ音 // ========================== let audioContext = null; function beep() { try { const AudioContext = window.AudioContext || window.webkitAudioContext; if (!audioContext) { audioContext = new AudioContext(); } if ( audioContext.state === "suspended" ) { audioContext.resume(); } const osc = audioContext.createOscillator(); const gain = audioContext.createGain(); osc.type = "square"; osc.frequency.value = 1800; gain.gain.value = 0.08; osc.connect(gain); gain.connect( audioContext.destination ); osc.start(); osc.stop( audioContext.currentTime + 0.08 ); } catch (e) { console.log( "音声エラー:", e ); } } // ========================== // バーコード処理 // ========================== function processBarcode( text, format ) { const now = Date.now(); // 同じコードの連続読み取りを抑制 if ( text === lastCode && now - lastTime < 500 ) { return; } lastCode = text; lastTime = now; result.textContent = text; type.textContent = "形式: " + format; beep(); if ( navigator.vibrate ) { navigator.vibrate(40); } console.log( "読み取り:", text, "形式:", format ); } // ========================== // カメラ開始 // ========================== async function startScanner() { try { status.textContent = "カメラを起動しています..."; // ZXing確認 if ( typeof ZXingBrowser === "undefined" ) { status.textContent = "バーコードライブラリを読み込めません"; return; } console.log( "ZXingBrowser:", ZXingBrowser ); /* * ここでは形式指定をしない。 * * EAN-13 / CODE128を含む * 1次元バーコードを読む。 * * まずカメラと基本読み取りを * 安定させるためのテスト。 */ codeReader = new ZXingBrowser.BrowserMultiFormatOneDReader(); console.log( "codeReader:", codeReader ); scannerControls = await codeReader.decodeFromVideoDevice( undefined, video, (resultObj, error) => { if (resultObj) { const text = resultObj.getText(); const format = resultObj .getBarcodeFormat() .toString(); processBarcode( text, format ); } } ); status.textContent = "JAN / CODE128 読み取り中"; window.scannerControls = scannerControls; console.log( "カメラ起動成功" ); } catch (error) { console.error( "Scanner error:", error ); status.textContent = "読み取り開始エラー: " + ( error.message || String(error) ); } } // ========================== // ページ読み込み // ========================== window.addEventListener( "load", () => { startScanner(); } ); </script>
 
-    const video =
-      document.getElementById("reader");
-
-    const status =
-      document.getElementById("status");
-
-    const result =
-      document.getElementById("result");
-
-    const type =
-      document.getElementById("type");
-
-
-    let codeReader = null;
-
-    let scannerControls = null;
-
-    let lastCode = "";
-
-    let lastTime = 0;
-
-
-    // ==========================
-    // ピッ音
-    // ==========================
-
-    let audioContext = null;
-
-    function beep() {
-
-      try {
-
-        if (!audioContext) {
-
-          const AudioContext =
-            window.AudioContext ||
-            window.webkitAudioContext;
-
-          audioContext =
-            new AudioContext();
-
-        }
-
-        if (
-          audioContext.state ===
-          "suspended"
-        ) {
-
-          audioContext.resume();
-
-        }
-
-        const osc =
-          audioContext.createOscillator();
-
-        const gain =
-          audioContext.createGain();
-
-        osc.type = "square";
-
-        osc.frequency.value = 1800;
-
-        gain.gain.value = 0.08;
-
-        osc.connect(gain);
-
-        gain.connect(
-          audioContext.destination
-        );
-
-        osc.start();
-
-        osc.stop(
-          audioContext.currentTime + 0.08
-        );
-
-      } catch (e) {
-
-        console.log(
-          "音声エラー",
-          e
-        );
-
-      }
-
-    }
-
-
-    // ==========================
-    // バーコード処理
-    // ==========================
-
-    function processBarcode(
-      text,
-      format
-    ) {
-
-      const now =
-        Date.now();
-
-
-      // 同じコードの連続反応を抑制
-      if (
-        text === lastCode &&
-        now - lastTime < 500
-      ) {
-
-        return;
-
-      }
-
-
-      lastCode = text;
-
-      lastTime = now;
-
-
-      // 表示
-      result.textContent =
-        text;
-
-      type.textContent =
-        "形式: " + format;
-
-
-      // 音
-      beep();
-
-
-      // 振動
-      if (
-        navigator.vibrate
-      ) {
-
-        navigator.vibrate(40);
-
-      }
-
-
-      console.log(
-        "読み取り:",
-        text,
-        "形式:",
-        format
-      );
-
-    }
-
-
-    // ==========================
-    // カメラ開始
-    // ==========================
-
-    async function startScanner() {
-
-      try {
-
-        status.textContent =
-          "カメラを起動しています...";
-
-
-        // ZXing確認
-        if (
-          typeof ZXingBrowser ===
-          "undefined"
-        ) {
-
-          status.textContent =
-            "バーコードライブラリを読み込めません";
-
-          return;
-
-        }
-
-
-        /*
-         * JAN(EAN-13) と CODE128 を
-         * 明示的に対象にする
-         */
-
-        const hints =
-          new Map();
-
-        hints.set(
-          ZXingBrowser.DecodeHintType.POSSIBLE_FORMATS,
-          [
-            ZXingBrowser.BarcodeFormat.EAN_13,
-            ZXingBrowser.BarcodeFormat.CODE_128
-          ]
-        );
-
-
-        /*
-         * MultiFormatReaderを使用
-         */
-
-        codeReader =
-          new ZXingBrowser.BrowserMultiFormatReader(
-            hints
-          );
-
-
-        /*
-         * 背面カメラを優先
-         */
-
-        scannerControls =
-          await codeReader.decodeFromVideoDevice(
-            undefined,
-            video,
-            (resultObj, error) => {
-
-              if (resultObj) {
-
-                const text =
-                  resultObj.getText();
-
-                const format =
-                  resultObj
-                    .getBarcodeFormat()
-                    .toString();
-
-
-                processBarcode(
-                  text,
-                  format
-                );
-
-              }
-
-            }
-          );
-
-
-        status.textContent =
-          "JAN / CODE128 読み取り中";
-
-
-        window.scannerControls =
-          scannerControls;
-
-
-      } catch (error) {
-
-        console.error(
-          "Scanner error:",
-          error
-        );
-
-        status.textContent =
-          "読み取り開始エラー: " +
-          (
-            error.message ||
-            error
-          );
-
-      }
-
-    }
-
-
-    // ==========================
-    // ページ読み込み
-    // ==========================
-
-    window.addEventListener(
-      "load",
-      () => {
-
-        startScanner();
-
-      }
-    );
-
-
-  </script>
 </body>
+
 </html>
