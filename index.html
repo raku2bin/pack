@@ -1,16 +1,15 @@
 <!DOCTYPE html>
 <html lang="ja">
-
 <head>
   <meta charset="UTF-8">
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0">
+<meta
+ name="viewport"
+ content="width=device-width, initial-scale=1.0">
 
   <title>らくらく パック</title>
 
-  <!-- ZXing -->
+  <!-- ZXing Browser -->
+
   <script src="https://unpkg.com/@zxing/browser@0.2.1"></script>
 
   <style>
@@ -70,6 +69,7 @@
 
     #result {
       margin-top: 15px;
+      padding: 0 10px;
       font-size: 28px;
       font-weight: bold;
       min-height: 40px;
@@ -83,6 +83,7 @@
       min-height: 25px;
     }
   </style>
+
 </head>
 
 <body>
@@ -93,14 +94,16 @@
 
   <div id="cameraArea">
 
-    <video
-      id="reader"
-      autoplay
-      muted
-      playsinline>
-    </video>
+```
+<video
+  id="reader"
+  autoplay
+  muted
+  playsinline>
+</video>
 
-    <div id="scanFrame"></div>
+<div id="scanFrame"></div>
+```
 
   </div>
 
@@ -111,7 +114,6 @@
   <div id="result"></div>
 
   <div id="type"></div>
-
 
   <script>
 
@@ -130,6 +132,8 @@
 
     let codeReader = null;
 
+    let scannerControls = null;
+
     let lastCode = "";
 
     let lastTime = 0;
@@ -139,22 +143,37 @@
     // ピッ音
     // ==========================
 
+    let audioContext = null;
+
     function beep() {
 
       try {
 
-        const AudioContext =
-          window.AudioContext ||
-          window.webkitAudioContext;
+        if (!audioContext) {
 
-        const ctx =
-          new AudioContext();
+          const AudioContext =
+            window.AudioContext ||
+            window.webkitAudioContext;
+
+          audioContext =
+            new AudioContext();
+
+        }
+
+        if (
+          audioContext.state ===
+          "suspended"
+        ) {
+
+          audioContext.resume();
+
+        }
 
         const osc =
-          ctx.createOscillator();
+          audioContext.createOscillator();
 
         const gain =
-          ctx.createGain();
+          audioContext.createGain();
 
         osc.type = "square";
 
@@ -164,15 +183,22 @@
 
         osc.connect(gain);
 
-        gain.connect(ctx.destination);
+        gain.connect(
+          audioContext.destination
+        );
 
         osc.start();
 
         osc.stop(
-          ctx.currentTime + 0.08
+          audioContext.currentTime + 0.08
         );
 
       } catch (e) {
+
+        console.log(
+          "音声エラー",
+          e
+        );
 
       }
 
@@ -192,12 +218,14 @@
         Date.now();
 
 
-      // 同じコードの連続反応を抑える
+      // 同じコードの連続反応を抑制
       if (
         text === lastCode &&
         now - lastTime < 500
       ) {
+
         return;
+
       }
 
 
@@ -206,15 +234,19 @@
       lastTime = now;
 
 
-      result.textContent = text;
+      // 表示
+      result.textContent =
+        text;
 
       type.textContent =
         "形式: " + format;
 
 
+      // 音
       beep();
 
 
+      // 振動
       if (
         navigator.vibrate
       ) {
@@ -246,7 +278,7 @@
           "カメラを起動しています...";
 
 
-        // ZXingが読み込まれているか確認
+        // ZXing確認
         if (
           typeof ZXingBrowser ===
           "undefined"
@@ -256,18 +288,42 @@
             "バーコードライブラリを読み込めません";
 
           return;
+
         }
 
 
         /*
-         * EAN-13 と CODE128 を含む
-         * 1次元バーコードを対象にする
+         * JAN(EAN-13) と CODE128 を
+         * 明示的に対象にする
          */
+
+        const hints =
+          new Map();
+
+        hints.set(
+          ZXingBrowser.DecodeHintType.POSSIBLE_FORMATS,
+          [
+            ZXingBrowser.BarcodeFormat.EAN_13,
+            ZXingBrowser.BarcodeFormat.CODE_128
+          ]
+        );
+
+
+        /*
+         * MultiFormatReaderを使用
+         */
+
         codeReader =
-          new ZXingBrowser.BrowserMultiFormatOneDReader();
+          new ZXingBrowser.BrowserMultiFormatReader(
+            hints
+          );
 
 
-        const controls =
+        /*
+         * 背面カメラを優先
+         */
+
+        scannerControls =
           await codeReader.decodeFromVideoDevice(
             undefined,
             video,
@@ -300,15 +356,22 @@
 
 
         window.scannerControls =
-          controls;
+          scannerControls;
 
 
       } catch (error) {
 
-        console.error(error);
+        console.error(
+          "Scanner error:",
+          error
+        );
 
         status.textContent =
-          "読み取り開始エラー";
+          "読み取り開始エラー: " +
+          (
+            error.message ||
+            error
+          );
 
       }
 
@@ -316,7 +379,7 @@
 
 
     // ==========================
-    // 開始
+    // ページ読み込み
     // ==========================
 
     window.addEventListener(
@@ -328,8 +391,7 @@
       }
     );
 
+
   </script>
-
 </body>
-
 </html>
